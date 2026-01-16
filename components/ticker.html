@@ -18,55 +18,55 @@
             bottom: 0;
             left: 0;
             right: 0;
-            height: 60px;
+            height: 180px;
             background: #000000;
             overflow: hidden;
             display: flex;
             align-items: center;
-            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            border-top: 2px solid rgba(255, 255, 255, 0.2);
         }
         .ticker-track {
             display: flex;
-            gap: 40px;
+            gap: 120px;
             animation: scroll linear infinite;
             white-space: nowrap;
             will-change: transform;
         }
         @keyframes scroll {
             0% { transform: translateX(0); }
-            100% { transform: translateX(-50%); }
+            100% { transform: translateX(-33.333%); }
         }
         .ticker-item {
             display: flex;
             align-items: center;
-            gap: 3px;
-            padding: 0 20px;
+            gap: 9px;
+            padding: 0 60px;
             flex-shrink: 0;
         }
         .ticker-logo {
-            width: 28px;
-            height: 28px;
-            border-radius: 4px;
+            width: 84px;
+            height: 84px;
+            border-radius: 8px;
             object-fit: contain;
             background: rgba(255, 255, 255, 0.1);
-            padding: 2px;
+            padding: 4px;
         }
         .ticker-symbol {
             font-weight: bold;
             color: #fff;
-            font-size: 15px;
+            font-size: 45px;
             min-width: auto;
         }
         .ticker-price {
             color: #fff;
-            font-size: 15px;
+            font-size: 45px;
             font-weight: 500;
             min-width: auto;
         }
         .ticker-change {
-            font-size: 14px;
+            font-size: 42px;
             font-weight: 500;
-            min-width: 100px;
+            min-width: auto;
         }
         .price-up { color: #4CAF50; }
         .price-down { color: #f44336; }

@@ -4,6 +4,8 @@
 let tickers = [];
 let customLogos = {};
 let updateInterval = null;
+let isInitialLoad = true;
+let currentAnimationDuration = 30;
 
 function loadTickers() {
     // Try to load from parent window's localStorage (if in iframe)
@@ -85,18 +87,29 @@ async function updateTicker() {
         return;
     }
     
-    // Duplicate for seamless scroll
-    const html = items.join('') + items.join('');
+    // Duplicate for seamless scroll (3 copies for perfect looping)
+    const html = items.join('') + items.join('') + items.join('');
     track.innerHTML = html;
     
-    // Calculate scroll duration based on content width
-    // Force reflow to get accurate width
-    track.style.animation = 'none';
-    setTimeout(() => {
-        const width = track.scrollWidth / 2;
-        const duration = Math.max(30, width / 50); // pixels per second, minimum 30s
-        track.style.animation = `scroll ${duration}s linear infinite`;
-    }, 10);
+    // Only reset animation on initial load
+    if (isInitialLoad) {
+        // Calculate scroll duration based on content width
+        // Use requestAnimationFrame for accurate measurements
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                const singleSetWidth = track.scrollWidth / 3; // Divide by 3 since we have 3 copies
+                const pixelsPerSecond = 50; // Adjust this to change scroll speed
+                const duration = Math.max(30, singleSetWidth / pixelsPerSecond);
+                currentAnimationDuration = duration;
+                
+                track.style.animation = `scroll ${duration}s linear infinite`;
+                isInitialLoad = false;
+            });
+        });
+    } else {
+        // On updates, preserve animation - just update content
+        // The animation will continue seamlessly since we have 3 copies
+    }
 }
 
 async function fetchTickerData(ticker) {
