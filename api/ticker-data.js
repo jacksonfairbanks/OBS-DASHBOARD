@@ -1,5 +1,7 @@
-// Vercel Serverless Function - Fetches ticker data and logos from MASSIVE API
-// Proxies requests to protect API key and handle CORS
+// Vercel Serverless Function - Fetches ticker data and logos
+// Price data: MASSIVE API (working well)
+// Logos: Logo.dev (primary, 70k+ tickers) with fallbacks
+// Proxies requests to protect API keys and handle CORS
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -7,6 +9,7 @@ export default async function handler(req, res) {
   res.setHeader('Cache-Control', 's-maxage=60'); // Cache for 1 minute
   
   const MASSIVE_API_KEY = process.env.MASSIVE_API_KEY;
+  const LOGO_API_KEY = process.env.LOGO_API_KEY || 'pk_JrV7Xik8TYOwpBvOuKugJQ'; // Logo.dev API key
   const { ticker } = req.query;
   
   if (!MASSIVE_API_KEY) {
@@ -59,14 +62,8 @@ export default async function handler(req, res) {
       });
     }
     
-    // For stocks and ETFs (including GLD, DXY, TLT, QQQ, SPY), fetch ticker overview (includes branding/logo)
-    const overviewUrl = `https://api.massive.com/v3/reference/tickers/${ticker}?apiKey=${MASSIVE_API_KEY}`;
-    const overviewRes = await fetch(overviewUrl);
-    
-    let overviewData = null;
-    if (overviewRes.ok) {
-      overviewData = await overviewRes.json();
-    }
+    // For stocks and ETFs (including GLD, DXY, TLT, QQQ, SPY), fetch price data
+    // Note: Removed MASSIVE branding endpoint - using Logo.dev instead for logos
     
     // Fetch last trade for current price
     const lastTradeUrl = `https://api.massive.com/v2/last/trade/${ticker}?apiKey=${MASSIVE_API_KEY}`;
@@ -91,18 +88,29 @@ export default async function handler(req, res) {
       prevClose = prevData?.results?.[0]?.c || 0;
     }
     
-    // Fallback to overview data if needed
-    if (!currentPrice && overviewData?.results?.market?.last_quote?.last?.price) {
-      currentPrice = overviewData.results.market.last_quote.last.price;
-    }
+    // If no prev close, use current as baseline
     if (!prevClose && currentPrice) {
-      prevClose = currentPrice; // If no prev close, use current as baseline
+      prevClose = currentPrice;
     }
     
-    // Extract logo from branding
-    const logoUrl = overviewData?.results?.branding?.logo_url || 
-                   overviewData?.results?.branding?.icon_url || 
-                   null;
+    // Logo fetching - Logo.dev is primary (70k+ tickers, best coverage)
+    // Fallbacks kept as backup but Logo.dev should handle most cases
+    let logoUrl = null;
+    
+    // Primary: Logo.dev (tested and working)
+    if (LOGO_API_KEY) {
+      logoUrl = `https://img.logo.dev/ticker/${ticker}?token=${LOGO_API_KEY}&size=40&format=png`;
+    }
+    
+    // Fallback options (if Logo.dev doesn't have a ticker, these may work)
+    // Note: These were tested and didn't work, but keeping as backup
+    if (!logoUrl) {
+      logoUrl = `https://assets.parqet.com/logos/symbol/${ticker}.png`;
+    }
+    
+    if (!logoUrl) {
+      logoUrl = `https://logo.synthfinance.com/${ticker}/icon`;
+    }
     
     // Calculate price change
     const change = currentPrice - prevClose;
@@ -114,24 +122,26 @@ export default async function handler(req, res) {
       change: change,
       percentChange: percentChange,
       logoUrl: logoUrl,
-      name: overviewData?.results?.name || ticker,
+      name: ticker,
       lastUpdated: new Date().toISOString()
     });
     
   } catch (error) {
     console.error('API Error:', error.message);
     
-    // Fallback - try to get logo from alternative services
+    // Fallback logo fetching (use Logo.dev primarily)
     let fallbackLogoUrl = null;
     
-    // Try Logo.dev as fallback
-    try {
-      // For stocks, try domain-based lookup
-      if (ticker.length <= 5 && !ticker.includes(':')) {
-        fallbackLogoUrl = `https://logo.clearbit.com/${ticker.toLowerCase()}.com`;
-      }
-    } catch (e) {
-      // Ignore fallback errors
+    if (LOGO_API_KEY) {
+      fallbackLogoUrl = `https://img.logo.dev/ticker/${ticker}?token=${LOGO_API_KEY}&size=40&format=png`;
+    }
+    
+    if (!fallbackLogoUrl) {
+      fallbackLogoUrl = `https://assets.parqet.com/logos/symbol/${ticker}.png`;
+    }
+    
+    if (!fallbackLogoUrl) {
+      fallbackLogoUrl = `https://logo.synthfinance.com/${ticker}/icon`;
     }
     
     res.status(200).json({
