@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ticker Tape</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: transparent;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+        }
+        .ticker-container {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: rgba(0, 0, 0, 0.85);
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .ticker-track {
+            display: flex;
+            gap: 40px;
+            animation: scroll linear infinite;
+            white-space: nowrap;
+            will-change: transform;
+        }
+        @keyframes scroll {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+        .ticker-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 0 20px;
+            flex-shrink: 0;
+        }
+        .ticker-logo {
+            width: 28px;
+            height: 28px;
+            border-radius: 4px;
+            object-fit: contain;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2px;
+        }
+        .ticker-symbol {
+            font-weight: bold;
+            color: #fff;
+            font-size: 15px;
+            min-width: 50px;
+        }
+        .ticker-price {
+            color: #fff;
+            font-size: 15px;
+            font-weight: 500;
+            min-width: 80px;
+            text-align: right;
+        }
+        .ticker-change {
+            font-size: 14px;
+            font-weight: 500;
+            min-width: 100px;
+        }
+        .price-up { color: #4CAF50; }
+        .price-down { color: #f44336; }
+        .ticker-separator {
+            width: 1px;
+            height: 30px;
+            background: rgba(255, 255, 255, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="ticker-container">
+        <div class="ticker-track" id="ticker-track">
+            <div class="ticker-item">
+                <span class="ticker-symbol">Loading...</span>
+            </div>
+        </div>
+    </div>
+    
+    <script src="../js/ticker.js"></script>
+</body>
+</html>
+
