@@ -1,0 +1,7 @@
+{
+  "name": "obs-dashboard",
+  "version": "1.0.0",
+  "description": "OBS Stream Overlay Dashboard",
+  "type": "module"
+}
+

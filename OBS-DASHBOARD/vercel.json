@@ -1,23 +1,12 @@
 {
+  "version": 2,
+  "buildCommand": null,
+  "outputDirectory": ".",
+  "framework": null,
   "rewrites": [
     {
-      "source": "/",
-      "destination": "/dashboard.html"
-    }
-  ],
-  "headers": [
-    {
-      "source": "/api/(.*)",
-      "headers": [
-        {
-          "key": "Access-Control-Allow-Origin",
-          "value": "*"
-        },
-        {
-          "key": "Access-Control-Allow-Methods",
-          "value": "GET, OPTIONS"
-        }
-      ]
+      "source": "/(.*)",
+      "destination": "/$1"
     }
   ]
 }
