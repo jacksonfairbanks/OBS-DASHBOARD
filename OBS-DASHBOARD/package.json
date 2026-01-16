@@ -1,6 +1,0 @@
-{
-  "name": "obs-dashboard",
-  "version": "1.0.0",
-  "description": "OBS Stream Overlay Dashboard - Static Site with API Routes",
-  "type": "module"
-}
