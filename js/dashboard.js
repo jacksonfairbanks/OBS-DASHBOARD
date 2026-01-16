@@ -323,15 +323,20 @@ function renderNameTags() {
             <input type="text" id="nametag-human-${index}" value="${tag.humanLink || ''}" 
                    placeholder="https://..."
                    style="width: 100%; padding: 10px; margin-bottom: 15px; background: #1a1a1a; border: 1px solid #444; color: #fff; border-radius: 4px; font-size: 14px; font-family: monospace;">
-            <label style="display: block; margin-bottom: 5px; color: #ccc; font-size: 14px;">OBS Browser Source Link (VDO.Ninja):</label>
+            <label style="display: block; margin-bottom: 5px; color: #ccc; font-size: 14px;">VDO.Ninja OBS Link (for video feed):</label>
             <input type="text" id="nametag-obs-${index}" value="${tag.obsLink || ''}" 
-                   placeholder="components/nametag.html?id=${index}"
+                   placeholder="https://vdo.ninja/?view=..."
                    style="width: 100%; padding: 10px; margin-bottom: 15px; background: #1a1a1a; border: 1px solid #444; color: #fff; border-radius: 4px; font-size: 14px; font-family: monospace;">
             ${screenshareHtml}
             <button class="btn" onclick="saveNameTag(${index})" style="width: 100%;">Save Cam ${index + 1}</button>
+            <div class="obs-link" style="margin-top: 20px; padding: 15px; background: #1a1a1a; border-radius: 6px; border: 2px solid #4CAF50;">
+                <div class="obs-link-label" style="color: #4CAF50; font-weight: bold; margin-bottom: 10px; font-size: 16px;">📺 Name Tag Component - OBS Browser Source URL:</div>
+                <div class="obs-link-url" id="nametag-component-url-${index}" onclick="copyToClipboard(this)" style="font-size: 14px; word-break: break-all; cursor: pointer; padding: 10px; background: #2a2a2a; border-radius: 4px;">${getBaseUrl()}components/nametag.html?id=${index}</div>
+                <div style="margin-top: 8px; font-size: 12px; color: #999;">Click to copy - Use this URL in OBS Browser Source for the name tag overlay</div>
+            </div>
             <div class="obs-link" style="margin-top: 15px;">
-                <div class="obs-link-label">Current OBS Browser Source URL:</div>
-                <div class="obs-link-url" id="nametag-url-${index}" onclick="copyToClipboard(this)">${tag.obsLink || `components/nametag.html?id=${index}`}</div>
+                <div class="obs-link-label">VDO.Ninja OBS URL (for video feed):</div>
+                <div class="obs-link-url" id="nametag-vdo-url-${index}" onclick="copyToClipboard(this)">${tag.obsLink || 'Not set'}</div>
             </div>
         `;
         list.appendChild(item);
@@ -373,9 +378,13 @@ function saveNameTag(index) {
     saveNameTags();
     
     // Update the displayed URLs
-    const urlEl = document.getElementById(`nametag-url-${index}`);
-    if (urlEl) {
-        urlEl.textContent = obsLink || `components/nametag.html?id=${index}`;
+    const componentUrlEl = document.getElementById(`nametag-component-url-${index}`);
+    if (componentUrlEl) {
+        componentUrlEl.textContent = getBaseUrl() + `components/nametag.html?id=${index}`;
+    }
+    const vdoUrlEl = document.getElementById(`nametag-vdo-url-${index}`);
+    if (vdoUrlEl) {
+        vdoUrlEl.textContent = obsLink || 'Not set';
     }
     const screenshareUrlEl = document.getElementById(`nametag-screenshare-url-${index}`);
     if (screenshareUrlEl && obsScreenshareLink) {
@@ -397,10 +406,22 @@ function saveNameTags() {
     localStorage.setItem('obs-nametags', JSON.stringify(nameTags));
 }
 
+function getBaseUrl() {
+    return window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '/');
+}
+
 function updateObsUrls() {
-    const baseUrl = window.location.origin + window.location.pathname.replace('dashboard.html', '');
+    const baseUrl = getBaseUrl();
     document.getElementById('ticker-url').textContent = baseUrl + 'components/ticker.html';
     document.getElementById('header-url').textContent = baseUrl + 'components/header.html';
+    
+    // Update name tag component URLs
+    nameTags.forEach((tag, index) => {
+        const urlEl = document.getElementById(`nametag-component-url-${index}`);
+        if (urlEl) {
+            urlEl.textContent = baseUrl + `components/nametag.html?id=${index}`;
+        }
+    });
 }
 
 function resetToDefaults() {
