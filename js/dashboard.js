@@ -81,16 +81,32 @@ function renderTickers() {
 async function fetchLogo(ticker, index) {
     if (!ticker) return;
     
-    // Check for custom logo first
-    const customLogos = JSON.parse(localStorage.getItem('obs-custom-logos') || '{}');
-    if (customLogos[ticker]) {
-        const logoEl = document.getElementById(`logo-${index}`);
-        if (logoEl) {
-            logoEl.innerHTML = `<img src="${customLogos[ticker]}" alt="${ticker}">`;
-        }
-        return;
-    }
+    const logoEl = document.getElementById(`logo-${index}`);
+    if (!logoEl) return;
     
+    // Strip $ prefix for logo filename
+    const logoName = ticker.replace(/^\$/, '');
+    
+    // Priority 1: Check for local logo file in logos/ folder
+    const localLogoUrl = `logos/${logoName}.png`;
+    const localLogo = new Image();
+    localLogo.onload = function() {
+        logoEl.innerHTML = `<img src="${localLogoUrl}" alt="${ticker}">`;
+    };
+    localLogo.onerror = function() {
+        // Priority 2: Check for custom uploaded logo in localStorage
+        const customLogos = JSON.parse(localStorage.getItem('obs-custom-logos') || '{}');
+        if (customLogos[ticker]) {
+            logoEl.innerHTML = `<img src="${customLogos[ticker]}" alt="${ticker}">`;
+        } else {
+            // Priority 3: Fetch from API
+            fetchLogoFromAPI(ticker, index);
+        }
+    };
+    localLogo.src = localLogoUrl;
+}
+
+async function fetchLogoFromAPI(ticker, index) {
     try {
         // Strip $ prefix for API calls
         const apiTicker = ticker.replace(/^\$/, '');

@@ -112,9 +112,19 @@ async function fetchTickerData(ticker) {
         // Restore original ticker with $ prefix for display
         data.ticker = ticker;
         
-        // Use custom logo if available
+        // Store API logo as fallback
+        const apiLogoUrl = data.logoUrl;
+        
+        // Priority 1: Check for custom uploaded logo in localStorage
         if (customLogos[ticker]) {
             data.logoUrl = customLogos[ticker];
+            data.apiLogoUrl = apiLogoUrl; // Store for fallback
+        } else {
+            // Priority 2: Check for local logo file (will fallback to API logo if not found)
+            const logoName = ticker.replace(/^\$/, '');
+            const localLogoUrl = `../logos/${logoName}.png`;
+            data.logoUrl = localLogoUrl;
+            data.apiLogoUrl = apiLogoUrl; // Store for fallback
         }
         
         return data;
@@ -144,9 +154,9 @@ function createTickerItem(data) {
     const isUp = data.change >= 0;
     const sign = isUp ? '+' : '';
     
-    // Logo HTML
+    // Logo HTML - try local/custom first, fallback to API logo if not found
     const logoHtml = data.logoUrl 
-        ? `<img src="${data.logoUrl}" alt="${ticker}" class="ticker-logo" onerror="this.style.display='none'">`
+        ? `<img src="${data.logoUrl}" alt="${ticker}" class="ticker-logo" onerror="if(this.dataset.fallback && !this.dataset.triedFallback){this.src=this.dataset.fallback;this.dataset.triedFallback='true'}else{this.style.display='none'}" ${data.apiLogoUrl ? `data-fallback="${data.apiLogoUrl}"` : ''}>`
         : '';
     
     return `
