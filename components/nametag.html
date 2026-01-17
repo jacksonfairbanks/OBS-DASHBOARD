@@ -53,41 +53,41 @@
         const urlParams = new URLSearchParams(window.location.search);
         const id = parseInt(urlParams.get('id') || '0');
         
-        let lastUpdateTime = 0;
         let currentName = '';
         let currentSubtext = '';
+        let lastDataHash = '';
         
         function updateNameTag() {
             let nameTags = [];
+            let dataHash = '';
             
             try {
-                // Try to get from parent window's localStorage (if in iframe)
-                if (window.parent !== window && window.parent.localStorage) {
-                    const saved = window.parent.localStorage.getItem('obs-nametags');
-                    if (saved) nameTags = JSON.parse(saved);
-                } else {
-                    // Use own localStorage
-                    const saved = localStorage.getItem('obs-nametags');
-                    if (saved) nameTags = JSON.parse(saved);
+                // Always try to read from localStorage directly (most reliable for OBS)
+                const saved = localStorage.getItem('obs-nametags');
+                if (saved) {
+                    nameTags = JSON.parse(saved);
+                    // Create a hash of the data to detect changes
+                    dataHash = saved + (localStorage.getItem('obs-nametags-timestamp') || '');
                 }
             } catch (e) {
-                // Fallback to own localStorage
-                try {
-                    const saved = localStorage.getItem('obs-nametags');
-                    if (saved) nameTags = JSON.parse(saved);
-                } catch (e2) {
-                    console.error('Could not access localStorage:', e2);
-                }
+                console.error('Error reading localStorage:', e);
+                return;
             }
+            
+            // Only update if data actually changed
+            if (dataHash === lastDataHash) {
+                return;
+            }
+            lastDataHash = dataHash;
             
             const nameEl = document.getElementById('name');
             const subtextEl = document.getElementById('subtext');
             
-            if (nameTags[id]) {
+            if (nameTags && nameTags[id]) {
                 const newName = nameTags[id].name || 'Name';
                 const newSubtext = nameTags[id].subtext || 'Subtext';
                 
-                // Only update if values actually changed (prevents unnecessary DOM updates)
+                // Update DOM only if values changed
                 if (newName !== currentName || newSubtext !== currentSubtext) {
                     nameEl.textContent = newName;
                     subtextEl.textContent = newSubtext;
@@ -95,6 +95,7 @@
                     currentSubtext = newSubtext;
                 }
             } else {
+                // Default values
                 if (currentName !== 'Name' || currentSubtext !== 'Subtext') {
                     nameEl.textContent = 'Name';
                     subtextEl.textContent = 'Subtext';
@@ -107,12 +108,13 @@
         // Update immediately
         updateNameTag();
         
-        // Poll more frequently for OBS browser sources (every 250ms)
-        setInterval(updateNameTag, 250);
+        // Aggressive polling - check every 100ms for OBS browser sources
+        // This ensures updates appear quickly even with isolated localStorage
+        setInterval(updateNameTag, 100);
         
         // Also listen for storage events (works if dashboard is in another tab/window)
         window.addEventListener('storage', (e) => {
-            if (e.key === 'obs-nametags') {
+            if (e.key === 'obs-nametags' || e.key === 'obs-nametags-timestamp') {
                 updateNameTag();
             }
         });
@@ -120,19 +122,13 @@
         // Listen for custom events (if dashboard dispatches them)
         window.addEventListener('nametag-update', updateNameTag);
         
-        // Also check for timestamp-based updates
-        let lastTimestamp = localStorage.getItem('obs-nametags-timestamp') || '0';
-        setInterval(() => {
-            try {
-                const currentTimestamp = localStorage.getItem('obs-nametags-timestamp') || '0';
-                if (currentTimestamp !== lastTimestamp) {
-                    lastTimestamp = currentTimestamp;
-                    updateNameTag();
-                }
-            } catch (e) {
-                // Ignore cross-origin errors
+        // Force update on focus (in case OBS browser source regains focus)
+        window.addEventListener('focus', updateNameTag);
+        window.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                updateNameTag();
             }
-        }, 200);
+        });
     </script>
 </body>
 </html>

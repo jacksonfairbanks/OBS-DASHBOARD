@@ -326,10 +326,6 @@ function renderNameTags() {
             <input type="text" id="nametag-screenshare-${index}" value="${tag.obsScreenshareLink || ''}" 
                    placeholder="https://vdo.ninja/?view=CAM_A:s&solo&room=TrueNorth1"
                    style="width: 100%; padding: 10px; margin-bottom: 15px; background: #1a1a1a; border: 1px solid #444; color: #fff; border-radius: 4px; font-size: 14px; font-family: monospace;">
-            <div class="obs-link" style="margin-bottom: 15px;">
-                <div class="obs-link-label">Screenshare OBS URL:</div>
-                <div class="obs-link-url" id="nametag-screenshare-url-${index}" onclick="copyToClipboard(this)">${tag.obsScreenshareLink || 'Not set'}</div>
-            </div>
         ` : '';
         
         item.innerHTML = `
@@ -354,8 +350,8 @@ function renderNameTags() {
             <button class="btn" onclick="saveNameTag(${index})" style="width: 100%;">Save Cam ${index + 1}</button>
             <div class="obs-link" style="margin-top: 20px; padding: 15px; background: #1a1a1a; border-radius: 6px; border: 2px solid #4CAF50;">
                 <div class="obs-link-label" style="color: #4CAF50; font-weight: bold; margin-bottom: 10px; font-size: 16px;">📺 Name Tag Component - OBS Browser Source URL:</div>
-                <div class="obs-link-url" id="nametag-component-url-${index}" onclick="copyToClipboard(this)" style="font-size: 14px; word-break: break-all; cursor: pointer; padding: 10px; background: #2a2a2a; border-radius: 4px;">${getBaseUrl()}components/nametag.html?id=${index}</div>
-                <div style="margin-top: 8px; font-size: 12px; color: #999;">Click to copy - Use this URL in OBS Browser Source for the name tag overlay</div>
+                <div class="obs-link-url" id="nametag-component-url-${index}" onclick="copyToClipboard(this)" style="font-size: 14px; word-break: break-all; cursor: pointer; padding: 10px; background: #2a2a2a; border-radius: 4px;">${getBaseUrl()}components/nametag.html?id=${index}&t=${Date.now()}</div>
+                <div style="margin-top: 8px; font-size: 12px; color: #999;">Click to copy - Use this URL in OBS Browser Source for the name tag overlay. URL updates automatically when you save.</div>
             </div>
             <div class="obs-link" style="margin-top: 15px;">
                 <div class="obs-link-label">VDO.Ninja OBS URL (for video feed):</div>
@@ -412,18 +408,16 @@ function saveNameTag(index) {
         newValue: JSON.stringify(nameTags)
     }));
     
-    // Update the displayed URLs
+    // Update the displayed URLs with cache-busting timestamp
     const componentUrlEl = document.getElementById(`nametag-component-url-${index}`);
     if (componentUrlEl) {
-        componentUrlEl.textContent = getBaseUrl() + `components/nametag.html?id=${index}`;
+        // Add timestamp to force OBS to refresh cache
+        const timestamp = Date.now();
+        componentUrlEl.textContent = getBaseUrl() + `components/nametag.html?id=${index}&t=${timestamp}`;
     }
     const vdoUrlEl = document.getElementById(`nametag-vdo-url-${index}`);
     if (vdoUrlEl) {
         vdoUrlEl.textContent = obsLink || 'Not set';
-    }
-    const screenshareUrlEl = document.getElementById(`nametag-screenshare-url-${index}`);
-    if (screenshareUrlEl && obsScreenshareLink) {
-        screenshareUrlEl.textContent = obsScreenshareLink;
     }
     
     // Show confirmation
@@ -466,11 +460,12 @@ function updateObsUrls() {
     document.getElementById('ticker-url').textContent = baseUrl + 'components/ticker.html';
     document.getElementById('header-url').textContent = baseUrl + 'components/header.html';
     
-    // Update name tag component URLs
+    // Update name tag component URLs with cache-busting
     nameTags.forEach((tag, index) => {
         const urlEl = document.getElementById(`nametag-component-url-${index}`);
         if (urlEl) {
-            urlEl.textContent = baseUrl + `components/nametag.html?id=${index}`;
+            const timestamp = Date.now();
+            urlEl.textContent = baseUrl + `components/nametag.html?id=${index}&t=${timestamp}`;
         }
     });
 }
