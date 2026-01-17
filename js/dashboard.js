@@ -365,7 +365,7 @@ function renderNameTags() {
             <div class="obs-link" style="margin-top: 15px; padding: 12px; background: #1a1a1a; border-radius: 6px; border: 2px solid #2196F3;">
                 <div class="obs-link-label" style="color: #2196F3; font-weight: bold; margin-bottom: 8px; font-size: 14px;">🔄 Auto-Update URL (Set Once, Never Change):</div>
                 <div class="obs-link-url" id="nametag-auto-url-${index}" onclick="copyToClipboard(this)" style="font-size: 13px; word-break: break-all; cursor: pointer; padding: 8px; background: #2a2a2a; border-radius: 4px;">${getBaseUrl()}components/nametag-auto.html?id=${index}</div>
-                <div style="margin-top: 6px; font-size: 11px; color: #999;">This URL auto-updates every 2 seconds - set it once in OBS and it will update automatically when you change names in the dashboard. Works across computers!</div>
+                <div style="margin-top: 6px; font-size: 11px; color: #999;">Set this URL once in OBS (unique per camera via id). Click "Refresh All Name Tags in OBS" button above to update. Works across computers!</div>
             </div>
             <div class="obs-link" style="margin-top: 15px;">
                 <div class="obs-link-label">VDO.Ninja OBS URL (for video feed):</div>
@@ -492,6 +492,38 @@ async function syncNameTagsToAPI() {
             tag.obsScreenshareLink || ''
         );
     });
+}
+
+async function refreshAllNameTagsInOBS() {
+    try {
+        const baseUrl = getBaseUrl();
+        const response = await fetch(`${baseUrl}api/nametag-data?id=all`, {
+            method: 'PUT'
+        });
+        
+        if (response.ok) {
+            const btn = document.getElementById('refresh-all-btn');
+            const originalText = btn.textContent;
+            btn.textContent = '✓ All Refreshed!';
+            btn.style.background = '#4CAF50';
+            setTimeout(() => {
+                btn.textContent = originalText;
+                btn.style.background = '';
+            }, 2000);
+        } else {
+            throw new Error('API request failed');
+        }
+    } catch (error) {
+        console.warn('Failed to refresh name tags:', error);
+        const btn = document.getElementById('refresh-all-btn');
+        const originalText = btn.textContent;
+        btn.textContent = '✗ Failed - Check Connection';
+        btn.style.background = '#f44336';
+        setTimeout(() => {
+            btn.textContent = originalText;
+            btn.style.background = '';
+        }, 2000);
+    }
 }
 
 function getBaseUrl() {

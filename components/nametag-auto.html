@@ -97,8 +97,33 @@
         // Update immediately (after initial load)
         setTimeout(updateIframe, 100);
         
-        // Poll API every 2 seconds for updates
-        setInterval(updateIframe, 2000);
+        // Check for manual refresh (no automatic updates, only when refresh button is clicked)
+        let lastRefreshTimestamp = 0;
+        
+        async function checkForRefresh() {
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'GET',
+                    cache: 'no-cache'
+                });
+                
+                if (!response.ok) return;
+                
+                const data = await response.json();
+                
+                // Only update if refreshTimestamp changed (manual refresh triggered)
+                if (data.refreshTimestamp && data.refreshTimestamp !== lastRefreshTimestamp) {
+                    lastRefreshTimestamp = data.refreshTimestamp;
+                    // Force update
+                    updateIframe();
+                }
+            } catch (error) {
+                // Silent fail
+            }
+        }
+        
+        // Check every 5 seconds for manual refresh (no flickering, just checking flag)
+        setInterval(checkForRefresh, 5000);
     </script>
 </body>
 </html>

@@ -5,11 +5,12 @@
 // In-memory store (persists during serverless function execution)
 // Note: This resets on each deployment. For persistence, use Vercel KV or a database.
 let nameTagStore = {};
+let refreshTimestamps = {}; // Track refresh requests per ID
 
 export default async function handler(req, res) {
   // Set CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate'); // Don't cache name tag data
   
@@ -34,7 +35,8 @@ export default async function handler(req, res) {
     return res.status(200).json({
       id: nameTagId,
       ...nameTag,
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      refreshTimestamp: refreshTimestamps[nameTagId] || 0
     });
   }
   
@@ -60,6 +62,31 @@ export default async function handler(req, res) {
       return res.status(400).json({
         error: 'Invalid request body',
         message: error.message
+      });
+    }
+  }
+  
+  // PUT: Trigger refresh for name tag(s)
+  if (req.method === 'PUT') {
+    // If id is 'all' or not provided, refresh all name tags (0-5)
+    if (req.query.id === 'all' || !req.query.id) {
+      // Refresh all name tags (0-5)
+      const now = Date.now();
+      for (let i = 0; i < 6; i++) {
+        refreshTimestamps[i] = now;
+      }
+      return res.status(200).json({
+        success: true,
+        message: 'All name tags refreshed',
+        refreshTimestamp: now
+      });
+    } else {
+      // Refresh specific name tag
+      refreshTimestamps[nameTagId] = Date.now();
+      return res.status(200).json({
+        success: true,
+        id: nameTagId,
+        refreshTimestamp: refreshTimestamps[nameTagId]
       });
     }
   }
