@@ -561,6 +561,38 @@ async function refreshAllNameTagsInOBS() {
     }
 }
 
+async function refreshHeaderInOBS() {
+    try {
+        const baseUrl = getBaseUrl();
+        const response = await fetch(`${baseUrl}api/header-data`, {
+            method: 'PUT'
+        });
+        
+        if (response.ok) {
+            const btn = document.getElementById('refresh-header-btn');
+            const originalText = btn.textContent;
+            btn.textContent = '✓ Refreshed!';
+            btn.style.background = '#4CAF50';
+            setTimeout(() => {
+                btn.textContent = originalText;
+                btn.style.background = '';
+            }, 2000);
+        } else {
+            throw new Error('API request failed');
+        }
+    } catch (error) {
+        console.warn('Failed to refresh header:', error);
+        const btn = document.getElementById('refresh-header-btn');
+        const originalText = btn.textContent;
+        btn.textContent = '✗ Failed - Check Connection';
+        btn.style.background = '#f44336';
+        setTimeout(() => {
+            btn.textContent = originalText;
+            btn.style.background = '';
+        }, 2000);
+    }
+}
+
 async function syncHeaderToAPI() {
     // Sync existing header to API on page load
     const savedHeader = localStorage.getItem('obs-header');
