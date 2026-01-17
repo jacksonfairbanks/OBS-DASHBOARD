@@ -247,13 +247,19 @@ function applyTickerSpeed() {
     // Save the speed
     saveTickerSpeed();
     
+    // Update the ticker URL with new speed and cache-busting timestamp
+    const speed = parseInt(document.getElementById('ticker-speed').value) || 50;
+    const baseUrl = getBaseUrl();
+    const timestamp = Date.now();
+    document.getElementById('ticker-url').textContent = baseUrl + `components/ticker.html?speed=${speed}&t=${timestamp}`;
+    
     // Show visual feedback
     btn.textContent = '✓ Applied!';
     btn.style.background = '#4CAF50';
     
     // Force update by dispatching a custom event that ticker.js listens to
     window.dispatchEvent(new CustomEvent('ticker-speed-update', {
-        detail: { speed: parseInt(document.getElementById('ticker-speed').value) || 50 }
+        detail: { speed: speed }
     }));
     
     // Reset button after 2 seconds
@@ -459,7 +465,8 @@ function getBaseUrl() {
 
 function updateObsUrls() {
     const baseUrl = getBaseUrl();
-    document.getElementById('ticker-url').textContent = baseUrl + 'components/ticker.html';
+    const tickerSpeed = parseInt(document.getElementById('ticker-speed').value) || 50;
+    document.getElementById('ticker-url').textContent = baseUrl + `components/ticker.html?speed=${tickerSpeed}`;
     document.getElementById('header-url').textContent = baseUrl + 'components/header.html';
     
     // Update name tag component URLs with cache-busting and data in URL

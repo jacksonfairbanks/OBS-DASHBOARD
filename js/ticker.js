@@ -8,16 +8,28 @@ let isInitialLoad = true;
 let currentAnimationDuration = 30;
 let tickerSpeed = 50; // pixels per second
 
+// Get speed from URL parameter (works in OBS isolated contexts)
+const urlParams = new URLSearchParams(window.location.search);
+const urlSpeed = urlParams.get('speed');
+
 function loadTickers() {
+    // Priority 1: Check URL parameter for speed (works in OBS)
+    if (urlSpeed !== null) {
+        tickerSpeed = parseInt(urlSpeed) || 50;
+    }
+    
     // Try to load from parent window's localStorage (if in iframe)
     try {
         if (window.parent !== window && window.parent.localStorage) {
             const saved = window.parent.localStorage.getItem('obs-tickers');
             const savedLogos = window.parent.localStorage.getItem('obs-custom-logos');
-            const savedSpeed = window.parent.localStorage.getItem('obs-ticker-speed');
             if (saved) tickers = JSON.parse(saved);
             if (savedLogos) customLogos = JSON.parse(savedLogos);
-            if (savedSpeed) tickerSpeed = parseInt(savedSpeed) || 50;
+            // Only use localStorage speed if URL doesn't have it
+            if (urlSpeed === null) {
+                const savedSpeed = window.parent.localStorage.getItem('obs-ticker-speed');
+                if (savedSpeed) tickerSpeed = parseInt(savedSpeed) || 50;
+            }
         }
     } catch (e) {
         console.log('Cannot access parent localStorage, using own');
@@ -27,7 +39,6 @@ function loadTickers() {
     if (tickers.length === 0) {
         const saved = localStorage.getItem('obs-tickers');
         const savedLogos = localStorage.getItem('obs-custom-logos');
-        const savedSpeed = localStorage.getItem('obs-ticker-speed');
         if (saved) {
             tickers = JSON.parse(saved);
         } else {
@@ -37,8 +48,12 @@ function loadTickers() {
         if (savedLogos) {
             customLogos = JSON.parse(savedLogos);
         }
-        if (savedSpeed) {
-            tickerSpeed = parseInt(savedSpeed) || 50;
+        // Only use localStorage speed if URL doesn't have it
+        if (urlSpeed === null) {
+            const savedSpeed = localStorage.getItem('obs-ticker-speed');
+            if (savedSpeed) {
+                tickerSpeed = parseInt(savedSpeed) || 50;
+            }
         }
     }
     
