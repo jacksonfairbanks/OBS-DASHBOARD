@@ -32,7 +32,21 @@
     <div class="header" id="header-text">TRUE NORTH</div>
     
     <script>
+        // Get text from URL parameter (works in OBS isolated contexts)
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlText = urlParams.get('text');
+        
         function updateHeader() {
+            const headerEl = document.getElementById('header-text');
+            if (!headerEl) return;
+            
+            // Priority 1: Check URL parameter (works in OBS isolated contexts)
+            if (urlText !== null) {
+                headerEl.textContent = decodeURIComponent(urlText) || 'TRUE NORTH';
+                return;
+            }
+            
+            // Priority 2: Fallback to localStorage (for browser testing)
             let text = 'TRUE NORTH'; // Default
             
             try {
@@ -51,20 +65,36 @@
                 if (saved) text = saved;
             }
             
-            const headerEl = document.getElementById('header-text');
-            if (headerEl) {
-                headerEl.textContent = text || 'TRUE NORTH';
-            }
+            headerEl.textContent = text || 'TRUE NORTH';
         }
         
         // Update immediately
         updateHeader();
         
-        // Update every second to catch changes from dashboard
-        setInterval(updateHeader, 1000);
+        // Poll localStorage as fallback (in case URL doesn't have data)
+        // Only poll if URL doesn't have the data
+        if (urlText === null) {
+            setInterval(() => {
+                try {
+                    const saved = localStorage.getItem('obs-header');
+                    if (saved) {
+                        const headerEl = document.getElementById('header-text');
+                        if (headerEl && headerEl.textContent !== saved) {
+                            headerEl.textContent = saved;
+                        }
+                    }
+                } catch (e) {
+                    // Ignore errors
+                }
+            }, 500);
+        }
         
-        // Also listen for storage events
-        window.addEventListener('storage', updateHeader);
+        // Listen for storage events (for browser testing)
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'obs-header') {
+                updateHeader();
+            }
+        });
     </script>
 </body>
 </html>

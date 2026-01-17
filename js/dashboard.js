@@ -45,6 +45,9 @@ function loadSettings() {
     
     // Sync existing name tags to API on load
     syncNameTagsToAPI();
+    
+    // Sync existing header to API on load
+    syncHeaderToAPI();
 }
 
 function saveTickers() {
@@ -225,6 +228,31 @@ function uploadLogo(index, input) {
 function saveHeader() {
     const text = document.getElementById('header-text').value;
     localStorage.setItem('obs-header', text);
+    
+    // Save to API endpoint for cross-computer and OBS auto-update support
+    saveHeaderToAPI(text);
+}
+
+async function saveHeaderToAPI(text) {
+    try {
+        const baseUrl = getBaseUrl();
+        const response = await fetch(`${baseUrl}api/header-data`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                text: text || 'TRUE NORTH'
+            })
+        });
+        
+        if (!response.ok) {
+            console.warn('Failed to save header to API:', response.statusText);
+        }
+    } catch (error) {
+        // Silently fail - API is optional, localStorage is primary
+        console.warn('API save failed (this is okay):', error);
+    }
 }
 
 function saveTickerSpeed() {
@@ -497,11 +525,18 @@ async function syncNameTagsToAPI() {
 async function refreshAllNameTagsInOBS() {
     try {
         const baseUrl = getBaseUrl();
-        const response = await fetch(`${baseUrl}api/nametag-data?id=all`, {
+        
+        // Refresh all name tags
+        const nameTagsResponse = await fetch(`${baseUrl}api/nametag-data?id=all`, {
             method: 'PUT'
         });
         
-        if (response.ok) {
+        // Also refresh header
+        const headerResponse = await fetch(`${baseUrl}api/header-data`, {
+            method: 'PUT'
+        });
+        
+        if (nameTagsResponse.ok && headerResponse.ok) {
             const btn = document.getElementById('refresh-all-btn');
             const originalText = btn.textContent;
             btn.textContent = '✓ All Refreshed!';
@@ -514,7 +549,7 @@ async function refreshAllNameTagsInOBS() {
             throw new Error('API request failed');
         }
     } catch (error) {
-        console.warn('Failed to refresh name tags:', error);
+        console.warn('Failed to refresh:', error);
         const btn = document.getElementById('refresh-all-btn');
         const originalText = btn.textContent;
         btn.textContent = '✗ Failed - Check Connection';
@@ -523,6 +558,16 @@ async function refreshAllNameTagsInOBS() {
             btn.textContent = originalText;
             btn.style.background = '';
         }, 2000);
+    }
+}
+
+async function syncHeaderToAPI() {
+    // Sync existing header to API on page load
+    const savedHeader = localStorage.getItem('obs-header');
+    if (savedHeader) {
+        saveHeaderToAPI(savedHeader);
+    } else {
+        saveHeaderToAPI('TRUE NORTH');
     }
 }
 
@@ -551,6 +596,12 @@ function updateObsUrls() {
     const tickerSpeed = parseInt(document.getElementById('ticker-speed').value) || 50;
     document.getElementById('ticker-url').textContent = baseUrl + `components/ticker.html?speed=${tickerSpeed}`;
     document.getElementById('header-url').textContent = baseUrl + 'components/header.html';
+    
+    // Update header auto-update URL
+    const headerAutoUrlEl = document.getElementById('header-auto-url');
+    if (headerAutoUrlEl) {
+        headerAutoUrlEl.textContent = baseUrl + 'components/header-auto.html';
+    }
     
     // Update name tag component URLs with cache-busting and data in URL
     nameTags.forEach((tag, index) => {

@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Header Auto-Update</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: transparent;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: transparent;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <iframe id="header-iframe" src=""></iframe>
+    
+    <script>
+        // Calculate base URL more reliably
+        let baseUrl = window.location.origin;
+        const pathname = window.location.pathname;
+        if (pathname.includes('/components/')) {
+            baseUrl += pathname.replace(/\/components\/[^\/]*$/, '/');
+        } else if (pathname.endsWith('/')) {
+            baseUrl += pathname;
+        } else {
+            baseUrl += pathname.replace(/\/[^\/]*$/, '/');
+        }
+        
+        const apiUrl = `${baseUrl}api/header-data`;
+        
+        console.log('Header auto-update wrapper initialized:', { baseUrl, apiUrl });
+        
+        const iframe = document.getElementById('header-iframe');
+        let lastRefreshTimestamp = 0;
+        let currentText = '';
+        
+        // Set initial iframe src immediately with defaults (so it loads right away)
+        function setIframeSrc(text, timestamp) {
+            const headerUrl = `${baseUrl}components/header.html?text=${encodeURIComponent(text || 'TRUE NORTH')}&t=${timestamp || Date.now()}`;
+            if (iframe.src !== headerUrl) {
+                iframe.src = headerUrl;
+            }
+        }
+        
+        // Load immediately with defaults
+        setIframeSrc('TRUE NORTH', Date.now());
+        
+        async function updateIframe() {
+            try {
+                // Fetch current header data from API
+                const response = await fetch(apiUrl, {
+                    method: 'GET',
+                    cache: 'no-cache'
+                });
+                
+                if (!response.ok) {
+                    console.warn('Failed to fetch header data from API:', response.status, response.statusText);
+                    return;
+                }
+                
+                const data = await response.json();
+                
+                // Update if data changed
+                if (data.text !== currentText) {
+                    currentText = data.text || 'TRUE NORTH';
+                    const timestamp = data.timestamp || Date.now();
+                    setIframeSrc(currentText, timestamp);
+                }
+            } catch (error) {
+                console.warn('Error fetching header data:', error);
+            }
+        }
+        
+        // Update immediately (after initial load)
+        setTimeout(updateIframe, 100);
+        
+        // Check for manual refresh (no automatic updates, only when refresh button is clicked)
+        async function checkForRefresh() {
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'GET',
+                    cache: 'no-cache'
+                });
+                
+                if (!response.ok) return;
+                
+                const data = await response.json();
+                
+                // Only update if refreshTimestamp changed (manual refresh triggered)
+                if (data.refreshTimestamp && data.refreshTimestamp !== lastRefreshTimestamp) {
+                    lastRefreshTimestamp = data.refreshTimestamp;
+                    // Force update
+                    updateIframe();
+                }
+            } catch (error) {
+                // Silent fail
+            }
+        }
+        
+        // Check every 5 seconds for manual refresh (no flickering, just checking flag)
+        setInterval(checkForRefresh, 5000);
+    </script>
+</body>
+</html>
+
