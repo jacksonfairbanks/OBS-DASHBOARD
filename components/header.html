@@ -25,6 +25,16 @@
             white-space: nowrap;
             z-index: 1000;
             text-align: center;
+            
+            /* Glassmorphism / Liquid Glass Effect */
+            background: rgba(0, 0, 0, 0.4); /* Semi-transparent dark background */
+            backdrop-filter: blur(20px) saturate(180%); /* Frosted glass blur effect */
+            -webkit-backdrop-filter: blur(20px) saturate(180%); /* Safari support */
+            border-radius: 30px; /* Rounded corners */
+            border: 2px solid rgba(255, 255, 255, 0.2); /* Subtle white border */
+            padding: 30px 90px; /* Padding for spacing around text */
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 
+                        inset 0 1px 0 rgba(255, 255, 255, 0.1); /* Depth and inner highlight */
         }
     </style>
 </head>
