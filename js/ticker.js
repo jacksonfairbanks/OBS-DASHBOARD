@@ -146,10 +146,10 @@ async function updateTicker() {
     
     // Duplicate for seamless scroll (3 copies for perfect looping)
     const html = items.join('') + items.join('') + items.join('');
-    track.innerHTML = html;
     
-    // Only reset animation on initial load
+    // CRITICAL: Only reset animation on initial load
     if (isInitialLoad) {
+        track.innerHTML = html;
         // Calculate scroll duration based on content width
         // Use requestAnimationFrame for accurate measurements
         requestAnimationFrame(() => {
@@ -159,10 +159,22 @@ async function updateTicker() {
             });
         });
     } else {
-        // On updates, preserve animation - just update content
-        // The animation will continue seamlessly since we have 3 copies
-        // But update speed if it changed
-        updateTickerSpeed();
+        // On data updates: Preserve animation state to prevent flicker/skip
+        // Get current animation state before updating
+        const computedStyle = window.getComputedStyle(track);
+        const currentAnimation = computedStyle.animation;
+        
+        // Update content
+        track.innerHTML = html;
+        
+        // Immediately restore animation to prevent reset
+        requestAnimationFrame(() => {
+            if (currentAnimation && currentAnimation !== 'none') {
+                track.style.animation = currentAnimation;
+            }
+        });
+        
+        // Don't call updateTickerSpeed() on data updates - it would reset animation
     }
 }
 
