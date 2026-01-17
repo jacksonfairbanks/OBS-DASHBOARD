@@ -42,6 +42,9 @@ function loadSettings() {
     renderTickers();
     renderNameTags();
     updateObsUrls();
+    
+    // Sync existing name tags to API on load
+    syncNameTagsToAPI();
 }
 
 function saveTickers() {
@@ -359,6 +362,11 @@ function renderNameTags() {
                 <div class="obs-link-url" id="nametag-component-url-${index}" onclick="copyToClipboard(this)" style="font-size: 14px; word-break: break-all; cursor: pointer; padding: 10px; background: #2a2a2a; border-radius: 4px;">${getBaseUrl()}components/nametag.html?id=${index}&name=${encodeURIComponent(tag.name || 'Name')}&subtext=${encodeURIComponent(tag.subtext || 'Subtext')}&t=${Date.now()}</div>
                 <div style="margin-top: 8px; font-size: 12px; color: #999;">Click to copy - Use this URL in OBS Browser Source for the name tag overlay. URL updates automatically when you save.</div>
             </div>
+            <div class="obs-link" style="margin-top: 15px; padding: 12px; background: #1a1a1a; border-radius: 6px; border: 2px solid #2196F3;">
+                <div class="obs-link-label" style="color: #2196F3; font-weight: bold; margin-bottom: 8px; font-size: 14px;">🔄 Auto-Update URL (Set Once, Never Change):</div>
+                <div class="obs-link-url" id="nametag-auto-url-${index}" onclick="copyToClipboard(this)" style="font-size: 13px; word-break: break-all; cursor: pointer; padding: 8px; background: #2a2a2a; border-radius: 4px;">${getBaseUrl()}components/nametag-auto.html?id=${index}</div>
+                <div style="margin-top: 6px; font-size: 11px; color: #999;">This URL auto-updates every 2 seconds - set it once in OBS and it will update automatically when you change names in the dashboard. Works across computers!</div>
+            </div>
             <div class="obs-link" style="margin-top: 15px;">
                 <div class="obs-link-label">VDO.Ninja OBS URL (for video feed):</div>
                 <div class="obs-link-url" id="nametag-vdo-url-${index}" onclick="copyToClipboard(this)">${tag.obsLink || 'Not set'}</div>
@@ -402,6 +410,9 @@ function saveNameTag(index) {
     
     saveNameTags();
     
+    // Save to API endpoint for cross-computer and OBS auto-update support
+    saveNameTagToAPI(index, name, subtext, humanLink, obsLink, obsScreenshareLink);
+    
     // Set timestamp to trigger updates in OBS browser sources
     localStorage.setItem('obs-nametags-timestamp', Date.now().toString());
     
@@ -441,6 +452,46 @@ function saveNameTag(index) {
 
 function saveNameTags() {
     localStorage.setItem('obs-nametags', JSON.stringify(nameTags));
+}
+
+async function saveNameTagToAPI(index, name, subtext, humanLink, obsLink, obsScreenshareLink) {
+    try {
+        const baseUrl = getBaseUrl();
+        const response = await fetch(`${baseUrl}api/nametag-data?id=${index}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                name: name,
+                subtext: subtext,
+                humanLink: humanLink,
+                obsLink: obsLink,
+                obsScreenshareLink: obsScreenshareLink
+            })
+        });
+        
+        if (!response.ok) {
+            console.warn('Failed to save name tag to API:', response.statusText);
+        }
+    } catch (error) {
+        // Silently fail - API is optional, localStorage is primary
+        console.warn('API save failed (this is okay):', error);
+    }
+}
+
+async function syncNameTagsToAPI() {
+    // Sync all existing name tags to API on page load
+    nameTags.forEach((tag, index) => {
+        saveNameTagToAPI(
+            index,
+            tag.name || 'Name',
+            tag.subtext || 'Subtext',
+            tag.humanLink || '',
+            tag.obsLink || '',
+            tag.obsScreenshareLink || ''
+        );
+    });
 }
 
 function getBaseUrl() {

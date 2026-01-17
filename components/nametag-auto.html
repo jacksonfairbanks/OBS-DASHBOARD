@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Name Tag Auto-Update</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: transparent;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: transparent;
+        }
+    </style>
+</head>
+<body>
+    <iframe id="nametag-iframe" src=""></iframe>
+    
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const id = parseInt(urlParams.get('id') || '0');
+        const baseUrl = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '/');
+        const apiUrl = `${baseUrl}api/nametag-data?id=${id}`;
+        
+        let lastTimestamp = 0;
+        let currentName = '';
+        let currentSubtext = '';
+        
+        async function updateIframe() {
+            try {
+                // Fetch current name tag data from API
+                const response = await fetch(apiUrl, {
+                    method: 'GET',
+                    cache: 'no-cache'
+                });
+                
+                if (!response.ok) {
+                    console.warn('Failed to fetch name tag data from API');
+                    return;
+                }
+                
+                const data = await response.json();
+                
+                // Only update if data actually changed
+                if (data.timestamp !== lastTimestamp || 
+                    data.name !== currentName || 
+                    data.subtext !== currentSubtext) {
+                    
+                    lastTimestamp = data.timestamp;
+                    currentName = data.name;
+                    currentSubtext = data.subtext;
+                    
+                    // Build URL with current data
+                    const iframe = document.getElementById('nametag-iframe');
+                    const nameTagUrl = `${baseUrl}components/nametag.html?id=${id}&name=${encodeURIComponent(data.name || 'Name')}&subtext=${encodeURIComponent(data.subtext || 'Subtext')}&t=${data.timestamp}`;
+                    
+                    // Update iframe src to trigger reload
+                    if (iframe.src !== nameTagUrl) {
+                        iframe.src = nameTagUrl;
+                    }
+                }
+            } catch (error) {
+                // Silently handle errors - will retry on next poll
+                console.warn('Error fetching name tag data:', error);
+            }
+        }
+        
+        // Update immediately
+        updateIframe();
+        
+        // Poll API every 2 seconds for updates
+        setInterval(updateIframe, 2000);
+    </script>
+</body>
+</html>
+
