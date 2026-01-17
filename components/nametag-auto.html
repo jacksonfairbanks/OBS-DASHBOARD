@@ -18,6 +18,7 @@
             height: 100%;
             border: none;
             background: transparent;
+            display: block;
         }
     </style>
 </head>
@@ -27,12 +28,37 @@
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         const id = parseInt(urlParams.get('id') || '0');
-        const baseUrl = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '/');
+        
+        // Calculate base URL more reliably
+        let baseUrl = window.location.origin;
+        const pathname = window.location.pathname;
+        if (pathname.includes('/components/')) {
+            baseUrl += pathname.replace(/\/components\/[^\/]*$/, '/');
+        } else if (pathname.endsWith('/')) {
+            baseUrl += pathname;
+        } else {
+            baseUrl += pathname.replace(/\/[^\/]*$/, '/');
+        }
+        
         const apiUrl = `${baseUrl}api/nametag-data?id=${id}`;
         
+        console.log('Auto-update wrapper initialized:', { id, baseUrl, apiUrl });
+        
+        const iframe = document.getElementById('nametag-iframe');
         let lastTimestamp = 0;
         let currentName = '';
         let currentSubtext = '';
+        
+        // Set initial iframe src immediately with defaults (so it loads right away)
+        function setIframeSrc(name, subtext, timestamp) {
+            const nameTagUrl = `${baseUrl}components/nametag.html?id=${id}&name=${encodeURIComponent(name || 'Name')}&subtext=${encodeURIComponent(subtext || 'Subtext')}&t=${timestamp || Date.now()}`;
+            if (iframe.src !== nameTagUrl) {
+                iframe.src = nameTagUrl;
+            }
+        }
+        
+        // Load immediately with defaults
+        setIframeSrc('Name', 'Subtext', Date.now());
         
         async function updateIframe() {
             try {
@@ -43,38 +69,33 @@
                 });
                 
                 if (!response.ok) {
-                    console.warn('Failed to fetch name tag data from API');
+                    console.warn('Failed to fetch name tag data from API:', response.status, response.statusText);
+                    // Keep showing current iframe content even if API fails
                     return;
                 }
                 
                 const data = await response.json();
                 
-                // Only update if data actually changed
+                // Update if data changed
                 if (data.timestamp !== lastTimestamp || 
                     data.name !== currentName || 
                     data.subtext !== currentSubtext) {
                     
-                    lastTimestamp = data.timestamp;
-                    currentName = data.name;
-                    currentSubtext = data.subtext;
+                    lastTimestamp = data.timestamp || Date.now();
+                    currentName = data.name || 'Name';
+                    currentSubtext = data.subtext || 'Subtext';
                     
-                    // Build URL with current data
-                    const iframe = document.getElementById('nametag-iframe');
-                    const nameTagUrl = `${baseUrl}components/nametag.html?id=${id}&name=${encodeURIComponent(data.name || 'Name')}&subtext=${encodeURIComponent(data.subtext || 'Subtext')}&t=${data.timestamp}`;
-                    
-                    // Update iframe src to trigger reload
-                    if (iframe.src !== nameTagUrl) {
-                        iframe.src = nameTagUrl;
-                    }
+                    // Update iframe with new data
+                    setIframeSrc(currentName, currentSubtext, lastTimestamp);
                 }
             } catch (error) {
-                // Silently handle errors - will retry on next poll
+                // Log error but keep showing current content
                 console.warn('Error fetching name tag data:', error);
             }
         }
         
-        // Update immediately
-        updateIframe();
+        // Update immediately (after initial load)
+        setTimeout(updateIframe, 100);
         
         // Poll API every 2 seconds for updates
         setInterval(updateIframe, 2000);
