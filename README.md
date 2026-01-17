@@ -5,40 +5,25 @@ A dashboard for managing OBS stream overlay components including ticker tape, he
 ## Structure
 
 ```
-obs-overlay/
-├── dashboard.html          # Main dashboard (open this first)
+OBS-DASHBOARD/
+├── index.html          # Main dashboard (served at root)
+├── dashboard.html      # Alternative dashboard URL
 ├── components/
-│   ├── ticker.html        # Ticker tape component
-│   ├── header.html        # Header text component
-│   └── nametag.html       # Name tag component (use ?id=0, ?id=1, etc.)
+│   ├── ticker.html    # Ticker tape component
+│   ├── header.html    # Header text component
+│   └── nametag.html   # Name tag component (use ?id=0, ?id=1, etc.)
 ├── js/
-│   ├── dashboard.js       # Dashboard logic
-│   └── ticker.js          # Ticker component logic
+│   ├── dashboard.js   # Dashboard logic
+│   └── ticker.js      # Ticker component logic
 └── api/
-    └── ticker-data.js     # Backend API endpoint (Vercel serverless function)
+    └── ticker-data.js # Backend API endpoint (Vercel serverless function)
 ```
 
 ## Setup
 
-1. **Open the dashboard**: Open `dashboard.html` in your browser
-2. **Configure your overlay**:
-   - **Ticker Settings**: Add/remove tickers, upload custom logos
-   - **Header Text**: Edit the header text
-   - **Name Tags**: Create and manage name tags for different scenes
-3. **Add to OBS**: Copy the Browser Source URLs from each tab and add them to OBS
-
-## API Setup
-
-The `api/ticker-data.js` file is a Vercel serverless function. 
-
-**For Vercel deployment:**
-- If deploying `obs-overlay` as a separate project, the API folder structure is correct
-- If using your existing Vercel project, you may need to move `api/ticker-data.js` to the root `api/` folder
-- Set the `MASSIVE_API_KEY` environment variable in Vercel
-
-**For local development:**
-- You'll need a local server (like `http-server` or `python -m http.server`)
-- The API endpoint won't work locally unless you set up a local serverless function environment
+1. **Deploy to Vercel**: Connect this repository to Vercel
+2. **Add API Key**: In Vercel project settings, add `MASSIVE_API_KEY` environment variable
+3. **Access Dashboard**: Visit your Vercel URL (e.g., `https://obs-dashboard.vercel.app`)
 
 ## Features
 
@@ -51,7 +36,7 @@ The `api/ticker-data.js` file is a Vercel serverless function.
 
 ## Usage
 
-1. Open `dashboard.html`
+1. Open the dashboard at your Vercel URL
 2. Configure your tickers, header, and name tags
 3. Copy the OBS Browser Source URLs
 4. In OBS, add Browser Sources:

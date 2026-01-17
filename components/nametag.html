@@ -49,11 +49,15 @@
     </div>
     
     <script>
+        // Get ID from URL query parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        const id = parseInt(urlParams.get('id') || '0');
+        
+        let lastUpdateTime = 0;
+        let currentName = '';
+        let currentSubtext = '';
+        
         function updateNameTag() {
-            // Get ID from URL query parameter
-            const urlParams = new URLSearchParams(window.location.search);
-            const id = parseInt(urlParams.get('id') || '0');
-            
             let nameTags = [];
             
             try {
@@ -68,30 +72,67 @@
                 }
             } catch (e) {
                 // Fallback to own localStorage
-                const saved = localStorage.getItem('obs-nametags');
-                if (saved) nameTags = JSON.parse(saved);
+                try {
+                    const saved = localStorage.getItem('obs-nametags');
+                    if (saved) nameTags = JSON.parse(saved);
+                } catch (e2) {
+                    console.error('Could not access localStorage:', e2);
+                }
             }
             
             const nameEl = document.getElementById('name');
             const subtextEl = document.getElementById('subtext');
             
             if (nameTags[id]) {
-                nameEl.textContent = nameTags[id].name || 'Name';
-                subtextEl.textContent = nameTags[id].subtext || 'Subtext';
+                const newName = nameTags[id].name || 'Name';
+                const newSubtext = nameTags[id].subtext || 'Subtext';
+                
+                // Only update if values actually changed (prevents unnecessary DOM updates)
+                if (newName !== currentName || newSubtext !== currentSubtext) {
+                    nameEl.textContent = newName;
+                    subtextEl.textContent = newSubtext;
+                    currentName = newName;
+                    currentSubtext = newSubtext;
+                }
             } else {
-                nameEl.textContent = 'Name';
-                subtextEl.textContent = 'Subtext';
+                if (currentName !== 'Name' || currentSubtext !== 'Subtext') {
+                    nameEl.textContent = 'Name';
+                    subtextEl.textContent = 'Subtext';
+                    currentName = 'Name';
+                    currentSubtext = 'Subtext';
+                }
             }
         }
         
         // Update immediately
         updateNameTag();
         
-        // Update every second to catch changes from dashboard
-        setInterval(updateNameTag, 1000);
+        // Poll more frequently for OBS browser sources (every 250ms)
+        setInterval(updateNameTag, 250);
         
-        // Also listen for storage events
-        window.addEventListener('storage', updateNameTag);
+        // Also listen for storage events (works if dashboard is in another tab/window)
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'obs-nametags') {
+                updateNameTag();
+            }
+        });
+        
+        // Listen for custom events (if dashboard dispatches them)
+        window.addEventListener('nametag-update', updateNameTag);
+        
+        // Also check for timestamp-based updates
+        let lastTimestamp = localStorage.getItem('obs-nametags-timestamp') || '0';
+        setInterval(() => {
+            try {
+                const currentTimestamp = localStorage.getItem('obs-nametags-timestamp') || '0';
+                if (currentTimestamp !== lastTimestamp) {
+                    lastTimestamp = currentTimestamp;
+                    updateNameTag();
+                }
+            } catch (e) {
+                // Ignore cross-origin errors
+            }
+        }, 200);
     </script>
 </body>
 </html>
