@@ -53,79 +53,77 @@
         const urlParams = new URLSearchParams(window.location.search);
         const id = parseInt(urlParams.get('id') || '0');
         
-        let currentName = '';
-        let currentSubtext = '';
-        let lastDataHash = '';
-        
         function updateNameTag() {
-            let nameTags = [];
-            let dataHash = '';
-            
-            try {
-                // Always try to read from localStorage directly (most reliable for OBS)
-                const saved = localStorage.getItem('obs-nametags');
-                if (saved) {
-                    nameTags = JSON.parse(saved);
-                    // Create a hash of the data to detect changes
-                    dataHash = saved + (localStorage.getItem('obs-nametags-timestamp') || '');
-                }
-            } catch (e) {
-                console.error('Error reading localStorage:', e);
-                return;
-            }
-            
-            // Only update if data actually changed
-            if (dataHash === lastDataHash) {
-                return;
-            }
-            lastDataHash = dataHash;
-            
             const nameEl = document.getElementById('name');
             const subtextEl = document.getElementById('subtext');
             
-            if (nameTags && nameTags[id]) {
-                const newName = nameTags[id].name || 'Name';
-                const newSubtext = nameTags[id].subtext || 'Subtext';
-                
-                // Update DOM only if values changed
-                if (newName !== currentName || newSubtext !== currentSubtext) {
-                    nameEl.textContent = newName;
-                    subtextEl.textContent = newSubtext;
-                    currentName = newName;
-                    currentSubtext = newSubtext;
-                }
-            } else {
-                // Default values
-                if (currentName !== 'Name' || currentSubtext !== 'Subtext') {
-                    nameEl.textContent = 'Name';
-                    subtextEl.textContent = 'Subtext';
-                    currentName = 'Name';
-                    currentSubtext = 'Subtext';
-                }
+            // Priority 1: Check URL parameters (works in OBS isolated contexts)
+            const urlName = urlParams.get('name');
+            const urlSubtext = urlParams.get('subtext');
+            
+            if (urlName !== null || urlSubtext !== null) {
+                // Data is in URL - use it directly (this is what OBS will use)
+                nameEl.textContent = decodeURIComponent(urlName || 'Name');
+                subtextEl.textContent = decodeURIComponent(urlSubtext || 'Subtext');
+                return;
             }
+            
+            // Priority 2: Fallback to localStorage (for browser testing)
+            try {
+                const saved = localStorage.getItem('obs-nametags');
+                if (saved) {
+                    const nameTags = JSON.parse(saved);
+                    if (nameTags && nameTags[id]) {
+                        nameEl.textContent = nameTags[id].name || 'Name';
+                        subtextEl.textContent = nameTags[id].subtext || 'Subtext';
+                        return;
+                    }
+                }
+            } catch (e) {
+                console.error('Error reading localStorage:', e);
+            }
+            
+            // Default values
+            nameEl.textContent = 'Name';
+            subtextEl.textContent = 'Subtext';
         }
         
         // Update immediately
         updateNameTag();
         
-        // Aggressive polling - check every 100ms for OBS browser sources
-        // This ensures updates appear quickly even with isolated localStorage
-        setInterval(updateNameTag, 100);
-        
-        // Also listen for storage events (works if dashboard is in another tab/window)
-        window.addEventListener('storage', (e) => {
-            if (e.key === 'obs-nametags' || e.key === 'obs-nametags-timestamp') {
-                updateNameTag();
+        // Poll localStorage as fallback (in case URL doesn't have data)
+        // This allows browser testing while URL params work in OBS
+        setInterval(() => {
+            const urlName = urlParams.get('name');
+            const urlSubtext = urlParams.get('subtext');
+            
+            // Only poll localStorage if URL doesn't have the data
+            if (urlName === null && urlSubtext === null) {
+                try {
+                    const saved = localStorage.getItem('obs-nametags');
+                    if (saved) {
+                        const nameTags = JSON.parse(saved);
+                        if (nameTags && nameTags[id]) {
+                            const nameEl = document.getElementById('name');
+                            const subtextEl = document.getElementById('subtext');
+                            const newName = nameTags[id].name || 'Name';
+                            const newSubtext = nameTags[id].subtext || 'Subtext';
+                            
+                            if (nameEl.textContent !== newName || subtextEl.textContent !== newSubtext) {
+                                nameEl.textContent = newName;
+                                subtextEl.textContent = newSubtext;
+                            }
+                        }
+                    }
+                } catch (e) {
+                    // Ignore errors
+                }
             }
-        });
+        }, 500);
         
-        // Listen for custom events (if dashboard dispatches them)
-        window.addEventListener('nametag-update', updateNameTag);
-        
-        // Force update on focus (in case OBS browser source regains focus)
-        window.addEventListener('focus', updateNameTag);
-        window.addEventListener('visibilitychange', () => {
-            if (!document.hidden) {
+        // Listen for storage events (for browser testing)
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'obs-nametags') {
                 updateNameTag();
             }
         });

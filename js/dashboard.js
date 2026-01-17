@@ -350,7 +350,7 @@ function renderNameTags() {
             <button class="btn" onclick="saveNameTag(${index})" style="width: 100%;">Save Cam ${index + 1}</button>
             <div class="obs-link" style="margin-top: 20px; padding: 15px; background: #1a1a1a; border-radius: 6px; border: 2px solid #4CAF50;">
                 <div class="obs-link-label" style="color: #4CAF50; font-weight: bold; margin-bottom: 10px; font-size: 16px;">📺 Name Tag Component - OBS Browser Source URL:</div>
-                <div class="obs-link-url" id="nametag-component-url-${index}" onclick="copyToClipboard(this)" style="font-size: 14px; word-break: break-all; cursor: pointer; padding: 10px; background: #2a2a2a; border-radius: 4px;">${getBaseUrl()}components/nametag.html?id=${index}&t=${Date.now()}</div>
+                <div class="obs-link-url" id="nametag-component-url-${index}" onclick="copyToClipboard(this)" style="font-size: 14px; word-break: break-all; cursor: pointer; padding: 10px; background: #2a2a2a; border-radius: 4px;">${getBaseUrl()}components/nametag.html?id=${index}&name=${encodeURIComponent(tag.name || 'Name')}&subtext=${encodeURIComponent(tag.subtext || 'Subtext')}&t=${Date.now()}</div>
                 <div style="margin-top: 8px; font-size: 12px; color: #999;">Click to copy - Use this URL in OBS Browser Source for the name tag overlay. URL updates automatically when you save.</div>
             </div>
             <div class="obs-link" style="margin-top: 15px;">
@@ -408,12 +408,14 @@ function saveNameTag(index) {
         newValue: JSON.stringify(nameTags)
     }));
     
-    // Update the displayed URLs with cache-busting timestamp
+    // Update the displayed URLs with cache-busting timestamp and data in URL
     const componentUrlEl = document.getElementById(`nametag-component-url-${index}`);
     if (componentUrlEl) {
-        // Add timestamp to force OBS to refresh cache
+        // Add name and subtext directly in URL for OBS compatibility
         const timestamp = Date.now();
-        componentUrlEl.textContent = getBaseUrl() + `components/nametag.html?id=${index}&t=${timestamp}`;
+        const encodedName = encodeURIComponent(name || 'Name');
+        const encodedSubtext = encodeURIComponent(subtext || 'Subtext');
+        componentUrlEl.textContent = getBaseUrl() + `components/nametag.html?id=${index}&name=${encodedName}&subtext=${encodedSubtext}&t=${timestamp}`;
     }
     const vdoUrlEl = document.getElementById(`nametag-vdo-url-${index}`);
     if (vdoUrlEl) {
@@ -460,12 +462,14 @@ function updateObsUrls() {
     document.getElementById('ticker-url').textContent = baseUrl + 'components/ticker.html';
     document.getElementById('header-url').textContent = baseUrl + 'components/header.html';
     
-    // Update name tag component URLs with cache-busting
+    // Update name tag component URLs with cache-busting and data in URL
     nameTags.forEach((tag, index) => {
         const urlEl = document.getElementById(`nametag-component-url-${index}`);
         if (urlEl) {
             const timestamp = Date.now();
-            urlEl.textContent = baseUrl + `components/nametag.html?id=${index}&t=${timestamp}`;
+            const encodedName = encodeURIComponent(tag.name || 'Name');
+            const encodedSubtext = encodeURIComponent(tag.subtext || 'Subtext');
+            urlEl.textContent = baseUrl + `components/nametag.html?id=${index}&name=${encodedName}&subtext=${encodedSubtext}&t=${timestamp}`;
         }
     });
 }
