@@ -8,7 +8,6 @@ function loadSettings() {
     const savedTickers = localStorage.getItem('obs-tickers');
     const savedHeader = localStorage.getItem('obs-header');
     const savedNameTags = localStorage.getItem('obs-nametags');
-    const savedTickerSpeed = localStorage.getItem('obs-ticker-speed');
     
     if (savedTickers) {
         tickers = JSON.parse(savedTickers);
@@ -25,18 +24,12 @@ function loadSettings() {
     
     if (savedNameTags) {
         nameTags = JSON.parse(savedNameTags);
-        // Ensure we have at least 6 slots and populate VDO.Ninja links if missing
-        ensureVdoNinjaLinks();
     } else {
-        // Initialize with default camera slots (6 cameras with VDO.Ninja links)
-        nameTags = initializeNameTagsWithVdoNinja();
-    }
-    
-    // Load ticker speed
-    if (savedTickerSpeed) {
-        document.getElementById('ticker-speed').value = savedTickerSpeed;
-    } else {
-        document.getElementById('ticker-speed').value = 50; // Default speed
+        // Initialize with default camera slots
+        nameTags = [
+            { name: '', subtext: '', humanLink: '', obsLink: '' },
+            { name: '', subtext: '', humanLink: '', obsLink: '' }
+        ];
     }
     
     renderTickers();
@@ -88,36 +81,20 @@ function renderTickers() {
 async function fetchLogo(ticker, index) {
     if (!ticker) return;
     
-    const logoEl = document.getElementById(`logo-${index}`);
-    if (!logoEl) return;
-    
-    // Strip $ prefix for logo filename
-    const logoName = ticker.replace(/^\$/, '');
-    
-    // Priority 1: Check for local logo file in logos/ folder
-    const localLogoUrl = `logos/${logoName}.png`;
-    const localLogo = new Image();
-    localLogo.onload = function() {
-        logoEl.innerHTML = `<img src="${localLogoUrl}" alt="${ticker}">`;
-    };
-    localLogo.onerror = function() {
-        // Priority 2: Check for custom uploaded logo in localStorage
-        const customLogos = JSON.parse(localStorage.getItem('obs-custom-logos') || '{}');
-        if (customLogos[ticker]) {
+    // Check for custom logo first
+    const customLogos = JSON.parse(localStorage.getItem('obs-custom-logos') || '{}');
+    if (customLogos[ticker]) {
+        const logoEl = document.getElementById(`logo-${index}`);
+        if (logoEl) {
             logoEl.innerHTML = `<img src="${customLogos[ticker]}" alt="${ticker}">`;
-        } else {
-            // Priority 3: Fetch from API
-            fetchLogoFromAPI(ticker, index);
         }
-    };
-    localLogo.src = localLogoUrl;
-}
-
-async function fetchLogoFromAPI(ticker, index) {
+        return;
+    }
+    
     try {
         // Strip $ prefix for API calls
         const apiTicker = ticker.replace(/^\$/, '');
-        // API path - works from root
+        // API path - works from root or obs-overlay folder
         const apiUrl = `api/ticker-data?ticker=${apiTicker}`;
         const response = await fetch(apiUrl);
         
@@ -149,7 +126,6 @@ async function fetchLogoFromAPI(ticker, index) {
 function addTicker() {
     tickers.push('');
     saveTickers();
-    renderTickers();
     // Focus on the new input
     setTimeout(() => {
         const inputs = document.querySelectorAll('.ticker-item input[type="text"]');
@@ -224,72 +200,6 @@ function saveHeader() {
     localStorage.setItem('obs-header', text);
 }
 
-function saveTickerSpeed() {
-    const speed = parseInt(document.getElementById('ticker-speed').value) || 50;
-    localStorage.setItem('obs-ticker-speed', speed.toString());
-    
-    // Trigger storage event so ticker component can update
-    window.dispatchEvent(new StorageEvent('storage', {
-        key: 'obs-ticker-speed',
-        newValue: speed.toString()
-    }));
-    
-    // Also update if ticker is in same window (for testing)
-    if (window.tickerUpdateSpeed) {
-        window.tickerUpdateSpeed();
-    }
-}
-
-function initializeNameTagsWithVdoNinja() {
-    const nameTags = [];
-    const camKeys = ['cam1', 'cam2', 'cam3', 'cam4', 'cam5', 'cam6'];
-    
-    camKeys.forEach((camKey, index) => {
-        const vdoConfig = typeof VDO_NINJA_ROOMS !== 'undefined' ? VDO_NINJA_ROOMS[camKey] : null;
-        nameTags.push({
-            name: '',
-            subtext: vdoConfig ? vdoConfig.label : '',
-            humanLink: vdoConfig ? vdoConfig.humanLink : '',
-            obsLink: vdoConfig ? vdoConfig.obsLink : '',
-            obsScreenshareLink: vdoConfig && vdoConfig.obsScreenshareLink ? vdoConfig.obsScreenshareLink : ''
-        });
-    });
-    
-    return nameTags;
-}
-
-function ensureVdoNinjaLinks() {
-    // Ensure we have 6 slots
-    while (nameTags.length < 6) {
-        nameTags.push({ name: '', subtext: '', humanLink: '', obsLink: '', obsScreenshareLink: '' });
-    }
-    
-    // Populate missing VDO.Ninja links from config
-    if (typeof VDO_NINJA_ROOMS !== 'undefined') {
-        const camKeys = ['cam1', 'cam2', 'cam3', 'cam4', 'cam5', 'cam6'];
-        camKeys.forEach((camKey, index) => {
-            if (index < nameTags.length) {
-                const vdoConfig = VDO_NINJA_ROOMS[camKey];
-                if (vdoConfig) {
-                    // Only populate if empty (don't overwrite existing)
-                    if (!nameTags[index].humanLink) {
-                        nameTags[index].humanLink = vdoConfig.humanLink;
-                    }
-                    if (!nameTags[index].obsLink) {
-                        nameTags[index].obsLink = vdoConfig.obsLink;
-                    }
-                    if (vdoConfig.obsScreenshareLink && !nameTags[index].obsScreenshareLink) {
-                        nameTags[index].obsScreenshareLink = vdoConfig.obsScreenshareLink;
-                    }
-                    if (!nameTags[index].subtext && vdoConfig.label) {
-                        nameTags[index].subtext = vdoConfig.label;
-                    }
-                }
-            }
-        });
-    }
-}
-
 function renderNameTags() {
     const list = document.getElementById('nametag-list');
     list.innerHTML = '';
@@ -297,20 +207,8 @@ function renderNameTags() {
     nameTags.forEach((tag, index) => {
         const item = document.createElement('div');
         item.className = 'section nametag-item';
-        const isHost = index === 0; // Cam 1 is Host
-        const screenshareHtml = isHost && tag.obsScreenshareLink ? `
-            <label style="display: block; margin-bottom: 5px; color: #ccc; font-size: 14px;">OBS Screenshare Link (Host only):</label>
-            <input type="text" id="nametag-screenshare-${index}" value="${tag.obsScreenshareLink || ''}" 
-                   placeholder="https://..."
-                   style="width: 100%; padding: 10px; margin-bottom: 15px; background: #1a1a1a; border: 1px solid #444; color: #fff; border-radius: 4px; font-size: 14px; font-family: monospace;">
-            <div class="obs-link" style="margin-bottom: 15px;">
-                <div class="obs-link-label">Screenshare OBS URL:</div>
-                <div class="obs-link-url" id="nametag-screenshare-url-${index}" onclick="copyToClipboard(this)">${tag.obsScreenshareLink || ''}</div>
-            </div>
-        ` : '';
-        
         item.innerHTML = `
-            <h3>Cam ${index + 1}${isHost ? ' (Host)' : ''}</h3>
+            <h3>Cam ${index + 1}</h3>
             <label style="display: block; margin-bottom: 5px; color: #ccc; font-size: 14px;">Name:</label>
             <input type="text" id="nametag-name-${index}" value="${tag.name || ''}" 
                    placeholder="Name (e.g., John Doe)" 
@@ -319,24 +217,18 @@ function renderNameTags() {
             <input type="text" id="nametag-subtext-${index}" value="${tag.subtext || ''}" 
                    placeholder="Subtext (e.g., Host, CEO, etc.)"
                    style="width: 100%; padding: 10px; margin-bottom: 15px; background: #1a1a1a; border: 1px solid #444; color: #fff; border-radius: 4px; font-size: 14px;">
-            <label style="display: block; margin-bottom: 5px; color: #ccc; font-size: 14px;">Human Link (VDO.Ninja - for person to join):</label>
+            <label style="display: block; margin-bottom: 5px; color: #ccc; font-size: 14px;">Human Link (for person to join):</label>
             <input type="text" id="nametag-human-${index}" value="${tag.humanLink || ''}" 
                    placeholder="https://..."
                    style="width: 100%; padding: 10px; margin-bottom: 15px; background: #1a1a1a; border: 1px solid #444; color: #fff; border-radius: 4px; font-size: 14px; font-family: monospace;">
-            <label style="display: block; margin-bottom: 5px; color: #ccc; font-size: 14px;">VDO.Ninja OBS Link (for video feed):</label>
+            <label style="display: block; margin-bottom: 5px; color: #ccc; font-size: 14px;">OBS Browser Source Link:</label>
             <input type="text" id="nametag-obs-${index}" value="${tag.obsLink || ''}" 
-                   placeholder="https://vdo.ninja/?view=..."
+                   placeholder="components/nametag.html?id=${index}"
                    style="width: 100%; padding: 10px; margin-bottom: 15px; background: #1a1a1a; border: 1px solid #444; color: #fff; border-radius: 4px; font-size: 14px; font-family: monospace;">
-            ${screenshareHtml}
             <button class="btn" onclick="saveNameTag(${index})" style="width: 100%;">Save Cam ${index + 1}</button>
-            <div class="obs-link" style="margin-top: 20px; padding: 15px; background: #1a1a1a; border-radius: 6px; border: 2px solid #4CAF50;">
-                <div class="obs-link-label" style="color: #4CAF50; font-weight: bold; margin-bottom: 10px; font-size: 16px;">📺 Name Tag Component - OBS Browser Source URL:</div>
-                <div class="obs-link-url" id="nametag-component-url-${index}" onclick="copyToClipboard(this)" style="font-size: 14px; word-break: break-all; cursor: pointer; padding: 10px; background: #2a2a2a; border-radius: 4px;">${getBaseUrl()}components/nametag.html?id=${index}</div>
-                <div style="margin-top: 8px; font-size: 12px; color: #999;">Click to copy - Use this URL in OBS Browser Source for the name tag overlay</div>
-            </div>
             <div class="obs-link" style="margin-top: 15px;">
-                <div class="obs-link-label">VDO.Ninja OBS URL (for video feed):</div>
-                <div class="obs-link-url" id="nametag-vdo-url-${index}" onclick="copyToClipboard(this)">${tag.obsLink || 'Not set'}</div>
+                <div class="obs-link-label">Current OBS Browser Source URL:</div>
+                <div class="obs-link-url" id="nametag-url-${index}" onclick="copyToClipboard(this)">${tag.obsLink || `components/nametag.html?id=${index}`}</div>
             </div>
         `;
         list.appendChild(item);
@@ -344,17 +236,7 @@ function renderNameTags() {
 }
 
 function addNameTag() {
-    const index = nameTags.length;
-    const camKey = `cam${index + 1}`;
-    const vdoConfig = typeof VDO_NINJA_ROOMS !== 'undefined' && VDO_NINJA_ROOMS[camKey] ? VDO_NINJA_ROOMS[camKey] : null;
-    
-    nameTags.push({
-        name: '',
-        subtext: vdoConfig ? vdoConfig.label : '',
-        humanLink: vdoConfig ? vdoConfig.humanLink : '',
-        obsLink: vdoConfig ? vdoConfig.obsLink : '',
-        obsScreenshareLink: vdoConfig && vdoConfig.obsScreenshareLink ? vdoConfig.obsScreenshareLink : ''
-    });
+    nameTags.push({ name: '', subtext: '', humanLink: '', obsLink: '' });
     saveNameTags();
     renderNameTags();
 }
@@ -364,31 +246,20 @@ function saveNameTag(index) {
     const subtext = document.getElementById(`nametag-subtext-${index}`).value;
     const humanLink = document.getElementById(`nametag-human-${index}`).value;
     const obsLink = document.getElementById(`nametag-obs-${index}`).value;
-    const screenshareLinkEl = document.getElementById(`nametag-screenshare-${index}`);
-    const obsScreenshareLink = screenshareLinkEl ? screenshareLinkEl.value : '';
     
     nameTags[index] = {
         name: name,
         subtext: subtext,
         humanLink: humanLink,
-        obsLink: obsLink,
-        obsScreenshareLink: obsScreenshareLink
+        obsLink: obsLink
     };
     
     saveNameTags();
     
-    // Update the displayed URLs
-    const componentUrlEl = document.getElementById(`nametag-component-url-${index}`);
-    if (componentUrlEl) {
-        componentUrlEl.textContent = getBaseUrl() + `components/nametag.html?id=${index}`;
-    }
-    const vdoUrlEl = document.getElementById(`nametag-vdo-url-${index}`);
-    if (vdoUrlEl) {
-        vdoUrlEl.textContent = obsLink || 'Not set';
-    }
-    const screenshareUrlEl = document.getElementById(`nametag-screenshare-url-${index}`);
-    if (screenshareUrlEl && obsScreenshareLink) {
-        screenshareUrlEl.textContent = obsScreenshareLink;
+    // Update the displayed URL
+    const urlEl = document.getElementById(`nametag-url-${index}`);
+    if (urlEl) {
+        urlEl.textContent = obsLink || `components/nametag.html?id=${index}`;
     }
     
     // Show confirmation
@@ -406,22 +277,10 @@ function saveNameTags() {
     localStorage.setItem('obs-nametags', JSON.stringify(nameTags));
 }
 
-function getBaseUrl() {
-    return window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '/');
-}
-
 function updateObsUrls() {
-    const baseUrl = getBaseUrl();
+    const baseUrl = window.location.origin + window.location.pathname.replace('dashboard.html', '');
     document.getElementById('ticker-url').textContent = baseUrl + 'components/ticker.html';
     document.getElementById('header-url').textContent = baseUrl + 'components/header.html';
-    
-    // Update name tag component URLs
-    nameTags.forEach((tag, index) => {
-        const urlEl = document.getElementById(`nametag-component-url-${index}`);
-        if (urlEl) {
-            urlEl.textContent = baseUrl + `components/nametag.html?id=${index}`;
-        }
-    });
 }
 
 function resetToDefaults() {
@@ -430,9 +289,6 @@ function resetToDefaults() {
         localStorage.removeItem('obs-custom-logos');
         tickers = ['$ASST', '$SATA', '$MSTR', '$STRC', '$STRF', '$STRK', '$STRD', '$MTPLF', '$MARA', '$RIOT', '$COIN', 'BTC', 'GLD', '$DXY', '$TLT', '$QQQ', '$SPY'];
         saveTickers();
-        // Reset speed to default
-        document.getElementById('ticker-speed').value = 50;
-        saveTickerSpeed();
         renderTickers();
     }
 }

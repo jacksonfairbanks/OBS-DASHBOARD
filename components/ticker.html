@@ -18,55 +18,56 @@
             bottom: 0;
             left: 0;
             right: 0;
-            height: 180px;
-            background: #000000;
+            height: 60px;
+            background: rgba(0, 0, 0, 0.85);
             overflow: hidden;
             display: flex;
             align-items: center;
-            border-top: 2px solid rgba(255, 255, 255, 0.2);
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
         }
         .ticker-track {
             display: flex;
-            gap: 120px;
+            gap: 40px;
             animation: scroll linear infinite;
             white-space: nowrap;
             will-change: transform;
         }
         @keyframes scroll {
             0% { transform: translateX(0); }
-            100% { transform: translateX(-33.333%); }
+            100% { transform: translateX(-50%); }
         }
         .ticker-item {
             display: flex;
             align-items: center;
-            gap: 9px;
-            padding: 0 60px;
+            gap: 12px;
+            padding: 0 20px;
             flex-shrink: 0;
         }
         .ticker-logo {
-            width: 84px;
-            height: 84px;
-            border-radius: 8px;
+            width: 28px;
+            height: 28px;
+            border-radius: 4px;
             object-fit: contain;
             background: rgba(255, 255, 255, 0.1);
-            padding: 4px;
+            padding: 2px;
         }
         .ticker-symbol {
             font-weight: bold;
             color: #fff;
-            font-size: 45px;
-            min-width: auto;
+            font-size: 15px;
+            min-width: 50px;
         }
         .ticker-price {
             color: #fff;
-            font-size: 45px;
+            font-size: 15px;
             font-weight: 500;
-            min-width: auto;
+            min-width: 80px;
+            text-align: right;
         }
         .ticker-change {
-            font-size: 42px;
+            font-size: 14px;
             font-weight: 500;
-            min-width: auto;
+            min-width: 100px;
         }
         .price-up { color: #4CAF50; }
         .price-down { color: #f44336; }
@@ -89,4 +90,5 @@
     <script src="../js/ticker.js"></script>
 </body>
 </html>
+
 

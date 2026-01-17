@@ -4,9 +4,6 @@
 let tickers = [];
 let customLogos = {};
 let updateInterval = null;
-let isInitialLoad = true;
-let currentAnimationDuration = 30;
-let tickerSpeed = 50; // pixels per second
 
 function loadTickers() {
     // Try to load from parent window's localStorage (if in iframe)
@@ -14,10 +11,8 @@ function loadTickers() {
         if (window.parent !== window && window.parent.localStorage) {
             const saved = window.parent.localStorage.getItem('obs-tickers');
             const savedLogos = window.parent.localStorage.getItem('obs-custom-logos');
-            const savedSpeed = window.parent.localStorage.getItem('obs-ticker-speed');
             if (saved) tickers = JSON.parse(saved);
             if (savedLogos) customLogos = JSON.parse(savedLogos);
-            if (savedSpeed) tickerSpeed = parseInt(savedSpeed) || 50;
         }
     } catch (e) {
         console.log('Cannot access parent localStorage, using own');
@@ -27,7 +22,6 @@ function loadTickers() {
     if (tickers.length === 0) {
         const saved = localStorage.getItem('obs-tickers');
         const savedLogos = localStorage.getItem('obs-custom-logos');
-        const savedSpeed = localStorage.getItem('obs-ticker-speed');
         if (saved) {
             tickers = JSON.parse(saved);
         } else {
@@ -36,9 +30,6 @@ function loadTickers() {
         }
         if (savedLogos) {
             customLogos = JSON.parse(savedLogos);
-        }
-        if (savedSpeed) {
-            tickerSpeed = parseInt(savedSpeed) || 50;
         }
     }
     
@@ -49,17 +40,9 @@ function loadTickers() {
     updateInterval = setInterval(updateTicker, 60000);
     
     // Also listen for storage changes (if dashboard updates)
-    window.addEventListener('storage', (e) => {
-        if (e.key === 'obs-ticker-speed') {
-            tickerSpeed = parseInt(e.newValue) || 50;
-            updateTickerSpeed();
-        } else {
-            loadTickers();
-        }
+    window.addEventListener('storage', () => {
+        loadTickers();
     });
-    
-    // Expose function for same-window updates
-    window.tickerUpdateSpeed = updateTickerSpeed;
 }
 
 async function updateTicker() {
@@ -102,53 +85,18 @@ async function updateTicker() {
         return;
     }
     
-    // Duplicate for seamless scroll (3 copies for perfect looping)
-    const html = items.join('') + items.join('') + items.join('');
+    // Duplicate for seamless scroll
+    const html = items.join('') + items.join('');
     track.innerHTML = html;
     
-    // Only reset animation on initial load
-    if (isInitialLoad) {
-        // Calculate scroll duration based on content width
-        // Use requestAnimationFrame for accurate measurements
-        requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-                updateTickerSpeed();
-                isInitialLoad = false;
-            });
-        });
-    } else {
-        // On updates, preserve animation - just update content
-        // The animation will continue seamlessly since we have 3 copies
-        // But update speed if it changed
-        updateTickerSpeed();
-    }
-}
-
-function updateTickerSpeed() {
-    const track = document.getElementById('ticker-track');
-    if (!track) return;
-    
-    // Reload speed from localStorage in case it changed
-    try {
-        if (window.parent !== window && window.parent.localStorage) {
-            const savedSpeed = window.parent.localStorage.getItem('obs-ticker-speed');
-            if (savedSpeed) tickerSpeed = parseInt(savedSpeed) || 50;
-        } else {
-            const savedSpeed = localStorage.getItem('obs-ticker-speed');
-            if (savedSpeed) tickerSpeed = parseInt(savedSpeed) || 50;
-        }
-    } catch (e) {
-        // Use current tickerSpeed value
-    }
-    
-    // Calculate scroll duration based on content width and speed
-    requestAnimationFrame(() => {
-        const singleSetWidth = track.scrollWidth / 3; // Divide by 3 since we have 3 copies
-        const duration = Math.max(10, singleSetWidth / tickerSpeed); // Minimum 10s, adjust based on speed
-        currentAnimationDuration = duration;
-        
+    // Calculate scroll duration based on content width
+    // Force reflow to get accurate width
+    track.style.animation = 'none';
+    setTimeout(() => {
+        const width = track.scrollWidth / 2;
+        const duration = Math.max(30, width / 50); // pixels per second, minimum 30s
         track.style.animation = `scroll ${duration}s linear infinite`;
-    });
+    }, 10);
 }
 
 async function fetchTickerData(ticker) {
@@ -164,19 +112,9 @@ async function fetchTickerData(ticker) {
         // Restore original ticker with $ prefix for display
         data.ticker = ticker;
         
-        // Store API logo as fallback
-        const apiLogoUrl = data.logoUrl;
-        
-        // Priority 1: Check for custom uploaded logo in localStorage
+        // Use custom logo if available
         if (customLogos[ticker]) {
             data.logoUrl = customLogos[ticker];
-            data.apiLogoUrl = apiLogoUrl; // Store for fallback
-        } else {
-            // Priority 2: Check for local logo file (will fallback to API logo if not found)
-            const logoName = ticker.replace(/^\$/, '');
-            const localLogoUrl = `../logos/${logoName}.png`;
-            data.logoUrl = localLogoUrl;
-            data.apiLogoUrl = apiLogoUrl; // Store for fallback
         }
         
         return data;
@@ -206,9 +144,9 @@ function createTickerItem(data) {
     const isUp = data.change >= 0;
     const sign = isUp ? '+' : '';
     
-    // Logo HTML - try local/custom first, fallback to API logo if not found
+    // Logo HTML
     const logoHtml = data.logoUrl 
-        ? `<img src="${data.logoUrl}" alt="${ticker}" class="ticker-logo" onerror="if(this.dataset.fallback && !this.dataset.triedFallback){this.src=this.dataset.fallback;this.dataset.triedFallback='true'}else{this.style.display='none'}" ${data.apiLogoUrl ? `data-fallback="${data.apiLogoUrl}"` : ''}>`
+        ? `<img src="${data.logoUrl}" alt="${ticker}" class="ticker-logo" onerror="this.style.display='none'">`
         : '';
     
     return `
