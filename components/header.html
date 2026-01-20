@@ -6,9 +6,11 @@
     <title>Header Text</title>
     <style>
         /* Graphik Sans Font Face - Load all weights for flexibility */
+        /* Try multiple path formats for compatibility */
         @font-face {
             font-family: 'Graphik Sans';
-            src: url('../Font/Graphik_Collection/Graphik Family/Graphik-Regular-Trial.otf') format('opentype');
+            src: url('/Font/Graphik_Collection/Graphik%20Family/Graphik-Regular-Trial.otf') format('opentype'),
+                 url('../Font/Graphik_Collection/Graphik%20Family/Graphik-Regular-Trial.otf') format('opentype');
             font-weight: 400;
             font-style: normal;
             font-display: swap;
@@ -16,7 +18,8 @@
         
         @font-face {
             font-family: 'Graphik Sans';
-            src: url('../Font/Graphik_Collection/Graphik Family/Graphik-Bold-Trial.otf') format('opentype');
+            src: url('/Font/Graphik_Collection/Graphik%20Family/Graphik-Bold-Trial.otf') format('opentype'),
+                 url('../Font/Graphik_Collection/Graphik%20Family/Graphik-Bold-Trial.otf') format('opentype');
             font-weight: 700;
             font-style: normal;
             font-display: swap;
@@ -24,7 +27,8 @@
         
         @font-face {
             font-family: 'Graphik Sans';
-            src: url('../Font/Graphik_Collection/Graphik Family/Graphik-Medium-Trial.otf') format('opentype');
+            src: url('/Font/Graphik_Collection/Graphik%20Family/Graphik-Medium-Trial.otf') format('opentype'),
+                 url('../Font/Graphik_Collection/Graphik%20Family/Graphik-Medium-Trial.otf') format('opentype');
             font-weight: 500;
             font-style: normal;
             font-display: swap;
@@ -32,7 +36,8 @@
         
         @font-face {
             font-family: 'Graphik Sans';
-            src: url('../Font/Graphik_Collection/Graphik Family/Graphik-Semibold-Trial.otf') format('opentype');
+            src: url('/Font/Graphik_Collection/Graphik%20Family/Graphik-Semibold-Trial.otf') format('opentype'),
+                 url('../Font/Graphik_Collection/Graphik%20Family/Graphik-Semibold-Trial.otf') format('opentype');
             font-weight: 600;
             font-style: normal;
             font-display: swap;
@@ -110,6 +115,17 @@
             }
             
             headerEl.textContent = text || 'TRUE NORTH';
+        }
+        
+        // Test font loading
+        if (document.fonts && document.fonts.check) {
+            document.fonts.ready.then(() => {
+                const isLoaded = document.fonts.check('108px Graphik Sans');
+                console.log('Graphik Sans font loaded:', isLoaded);
+                if (!isLoaded) {
+                    console.warn('Graphik Sans font failed to load. Check font paths and ensure Font folder is accessible.');
+                }
+            });
         }
         
         // Update immediately
