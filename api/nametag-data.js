@@ -6,6 +6,7 @@
 // Note: This resets on each deployment. For persistence, use Vercel KV or a database.
 let nameTagStore = {};
 let refreshTimestamps = {}; // Track refresh requests per ID
+let savedTimestamps = {}; // Track when data was actually saved (not generated on GET)
 
 export default async function handler(req, res) {
   // Set CORS headers
@@ -32,11 +33,17 @@ export default async function handler(req, res) {
       obsScreenshareLink: ''
     };
     
+    // Check if this is default/empty data
+    const isDefault = !nameTagStore[nameTagId] || 
+                     (nameTag.name === 'Name' && nameTag.subtext === 'Subtext' && 
+                      !nameTag.humanLink && !nameTag.obsLink);
+    
     return res.status(200).json({
       id: nameTagId,
       ...nameTag,
-      timestamp: Date.now(),
-      refreshTimestamp: refreshTimestamps[nameTagId] || 0
+      timestamp: savedTimestamps[nameTagId] || 0, // Use saved timestamp, not new one
+      refreshTimestamp: refreshTimestamps[nameTagId] || 0,
+      isDefault: isDefault // Flag to indicate if this is default data
     });
   }
   
@@ -45,18 +52,27 @@ export default async function handler(req, res) {
     try {
       const { name, subtext, humanLink, obsLink, obsScreenshareLink } = req.body;
       
-      nameTagStore[nameTagId] = {
-        name: name || 'Name',
-        subtext: subtext || 'Subtext',
-        humanLink: humanLink || '',
-        obsLink: obsLink || '',
-        obsScreenshareLink: obsScreenshareLink || ''
-      };
+      // Only save if we have actual data (not just defaults)
+      const hasData = name && name !== 'Name' || subtext && subtext !== 'Subtext' || 
+                      humanLink || obsLink || obsScreenshareLink;
+      
+      if (hasData) {
+        nameTagStore[nameTagId] = {
+          name: name || 'Name',
+          subtext: subtext || 'Subtext',
+          humanLink: humanLink || '',
+          obsLink: obsLink || '',
+          obsScreenshareLink: obsScreenshareLink || ''
+        };
+        
+        // Save the timestamp when data is actually saved
+        savedTimestamps[nameTagId] = Date.now();
+      }
       
       return res.status(200).json({
         success: true,
         id: nameTagId,
-        timestamp: Date.now()
+        timestamp: savedTimestamps[nameTagId] || Date.now()
       });
     } catch (error) {
       return res.status(400).json({
@@ -66,7 +82,7 @@ export default async function handler(req, res) {
     }
   }
   
-  // PUT: Trigger refresh for name tag(s)
+  // PUT: Trigger refresh for name tag(s) - also re-save data if available
   if (req.method === 'PUT') {
     // If id is 'all' or not provided, refresh all name tags (0-5)
     if (req.query.id === 'all' || !req.query.id) {
@@ -74,6 +90,10 @@ export default async function handler(req, res) {
       const now = Date.now();
       for (let i = 0; i < 6; i++) {
         refreshTimestamps[i] = now;
+        // If we have saved data, update its timestamp to keep it fresh
+        if (savedTimestamps[i]) {
+          savedTimestamps[i] = now;
+        }
       }
       return res.status(200).json({
         success: true,
@@ -82,7 +102,12 @@ export default async function handler(req, res) {
       });
     } else {
       // Refresh specific name tag
-      refreshTimestamps[nameTagId] = Date.now();
+      const now = Date.now();
+      refreshTimestamps[nameTagId] = now;
+      // If we have saved data, update its timestamp to keep it fresh
+      if (savedTimestamps[nameTagId]) {
+        savedTimestamps[nameTagId] = now;
+      }
       return res.status(200).json({
         success: true,
         id: nameTagId,

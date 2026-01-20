@@ -46,8 +46,10 @@
         
         const iframe = document.getElementById('nametag-iframe');
         let lastTimestamp = 0;
+        let lastSavedTimestamp = 0; // Track the saved timestamp from API
         let currentName = '';
         let currentSubtext = '';
+        let hasRealData = false; // Track if we've ever loaded real (non-default) data
         
         // Set initial iframe src immediately with defaults (so it loads right away)
         function setIframeSrc(name, subtext, timestamp) {
@@ -76,17 +78,39 @@
                 
                 const data = await response.json();
                 
-                // Update if data changed
-                if (data.timestamp !== lastTimestamp || 
-                    data.name !== currentName || 
-                    data.subtext !== currentSubtext) {
-                    
-                    lastTimestamp = data.timestamp || Date.now();
-                    currentName = data.name || 'Name';
-                    currentSubtext = data.subtext || 'Subtext';
-                    
-                    // Update iframe with new data
-                    setIframeSrc(currentName, currentSubtext, lastTimestamp);
+                // CRITICAL: Don't update to defaults if we already have real data
+                // This prevents the API reset bug from overwriting good data
+                if (data.isDefault && hasRealData) {
+                    console.log('API returned defaults but we have real data - ignoring update');
+                    return;
+                }
+                
+                // Check if this is real data (not defaults)
+                const isRealData = !data.isDefault && 
+                                   (data.name !== 'Name' || data.subtext !== 'Subtext' || 
+                                    data.humanLink || data.obsLink);
+                
+                // Update if:
+                // 1. Saved timestamp changed (data was actually saved/updated)
+                // 2. OR name/subtext changed AND we don't already have real data
+                const savedTimestampChanged = data.timestamp && data.timestamp !== lastSavedTimestamp;
+                const dataChanged = (data.name !== currentName || data.subtext !== currentSubtext);
+                
+                if (savedTimestampChanged || (dataChanged && (!hasRealData || isRealData))) {
+                    // Only update if we're getting real data, or if we don't have real data yet
+                    if (isRealData || !hasRealData) {
+                        lastSavedTimestamp = data.timestamp || 0;
+                        lastTimestamp = data.timestamp || Date.now();
+                        currentName = data.name || 'Name';
+                        currentSubtext = data.subtext || 'Subtext';
+                        
+                        if (isRealData) {
+                            hasRealData = true;
+                        }
+                        
+                        // Update iframe with new data
+                        setIframeSrc(currentName, currentSubtext, lastTimestamp);
+                    }
                 }
             } catch (error) {
                 // Log error but keep showing current content
@@ -111,10 +135,16 @@
                 
                 const data = await response.json();
                 
+                // CRITICAL: Don't update to defaults if we already have real data
+                if (data.isDefault && hasRealData) {
+                    console.log('Refresh check: API returned defaults but we have real data - ignoring');
+                    return;
+                }
+                
                 // Only update if refreshTimestamp changed (manual refresh triggered)
                 if (data.refreshTimestamp && data.refreshTimestamp !== lastRefreshTimestamp) {
                     lastRefreshTimestamp = data.refreshTimestamp;
-                    // Force update
+                    // Force update - but updateIframe will check for defaults
                     updateIframe();
                 }
             } catch (error) {
