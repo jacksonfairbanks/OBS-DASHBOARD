@@ -5,12 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Header Text</title>
     <style>
-        /* Graphik Sans Font Face */
+        /* Graphik Sans Font Face - Load all weights for flexibility */
         @font-face {
             font-family: 'Graphik Sans';
             src: url('../Font/Graphik_Collection/Graphik Family/Graphik-Regular-Trial.otf') format('opentype');
             font-weight: 400;
             font-style: normal;
+            font-display: swap;
         }
         
         @font-face {
@@ -18,6 +19,23 @@
             src: url('../Font/Graphik_Collection/Graphik Family/Graphik-Bold-Trial.otf') format('opentype');
             font-weight: 700;
             font-style: normal;
+            font-display: swap;
+        }
+        
+        @font-face {
+            font-family: 'Graphik Sans';
+            src: url('../Font/Graphik_Collection/Graphik Family/Graphik-Medium-Trial.otf') format('opentype');
+            font-weight: 500;
+            font-style: normal;
+            font-display: swap;
+        }
+        
+        @font-face {
+            font-family: 'Graphik Sans';
+            src: url('../Font/Graphik_Collection/Graphik Family/Graphik-Semibold-Trial.otf') format('opentype');
+            font-weight: 600;
+            font-style: normal;
+            font-display: swap;
         }
         
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -35,7 +53,7 @@
             transform: translateX(-50%);
             color: #fff;
             font-family: 'Graphik Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            font-weight: bold;
+            font-weight: 700; /* Use numeric weight to ensure Bold font loads */
             font-size: 108px;
             text-shadow: 6px 6px 12px rgba(0,0,0,0.8);
             white-space: nowrap;
