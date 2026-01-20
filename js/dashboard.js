@@ -384,7 +384,12 @@ function renderNameTags() {
                    placeholder="https://vdo.ninja/?view=..."
                    style="width: 100%; padding: 10px; margin-bottom: 15px; background: #1a1a1a; border: 1px solid #444; color: #fff; border-radius: 4px; font-size: 14px; font-family: monospace;">
             ${screenshareHtml}
-            <button class="btn" onclick="saveNameTag(${index})" style="width: 100%;">Save Cam ${index + 1}</button>
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                <button class="btn" onclick="saveNameTag(${index})" style="flex: 1;">Save Cam ${index + 1}</button>
+                <button class="btn" onclick="refreshNameTagInOBS(${index})" id="refresh-nametag-btn-${index}" style="flex: 0 0 auto; padding: 10px 15px; background: #2196F3;">
+                    🔄 Refresh
+                </button>
+            </div>
             <div class="obs-link" style="margin-top: 20px; padding: 15px; background: #1a1a1a; border-radius: 6px; border: 2px solid #4CAF50;">
                 <div class="obs-link-label" style="color: #4CAF50; font-weight: bold; margin-bottom: 10px; font-size: 16px;">📺 Name Tag Component - OBS Browser Source URL:</div>
                 <div class="obs-link-url" id="nametag-component-url-${index}" onclick="copyToClipboard(this)" style="font-size: 14px; word-break: break-all; cursor: pointer; padding: 10px; background: #2a2a2a; border-radius: 4px;">${getBaseUrl()}components/nametag.html?id=${index}&name=${encodeURIComponent(tag.name || 'Name')}&subtext=${encodeURIComponent(tag.subtext || 'Subtext')}&t=${Date.now()}</div>
@@ -393,7 +398,7 @@ function renderNameTags() {
             <div class="obs-link" style="margin-top: 15px; padding: 12px; background: #1a1a1a; border-radius: 6px; border: 2px solid #2196F3;">
                 <div class="obs-link-label" style="color: #2196F3; font-weight: bold; margin-bottom: 8px; font-size: 14px;">🔄 Auto-Update URL (Set Once, Never Change):</div>
                 <div class="obs-link-url" id="nametag-auto-url-${index}" onclick="copyToClipboard(this)" style="font-size: 13px; word-break: break-all; cursor: pointer; padding: 8px; background: #2a2a2a; border-radius: 4px;">${getBaseUrl()}components/nametag-auto.html?id=${index}</div>
-                <div style="margin-top: 6px; font-size: 11px; color: #999;">Set this URL once in OBS (unique per camera via id). Click "Refresh All Name Tags in OBS" button above to update. Works across computers!</div>
+                <div style="margin-top: 6px; font-size: 11px; color: #999;">Set this URL once in OBS (unique per camera via id). Click "🔄 Refresh" button above to update this specific name tag. Works across computers!</div>
             </div>
             <div class="obs-link" style="margin-top: 15px;">
                 <div class="obs-link-label">VDO.Ninja OBS URL (for video feed):</div>
@@ -520,6 +525,40 @@ async function syncNameTagsToAPI() {
             tag.obsScreenshareLink || ''
         );
     });
+}
+
+async function refreshNameTagInOBS(id) {
+    try {
+        const baseUrl = getBaseUrl();
+        
+        // Refresh specific name tag
+        const response = await fetch(`${baseUrl}api/nametag-data?id=${id}`, {
+            method: 'PUT'
+        });
+        
+        if (response.ok) {
+            const btn = document.getElementById(`refresh-nametag-btn-${id}`);
+            const originalText = btn.textContent;
+            btn.textContent = '✓ Refreshed!';
+            btn.style.background = '#4CAF50';
+            setTimeout(() => {
+                btn.textContent = originalText;
+                btn.style.background = '';
+            }, 2000);
+        } else {
+            throw new Error('API request failed');
+        }
+    } catch (error) {
+        console.warn('Failed to refresh name tag:', error);
+        const btn = document.getElementById(`refresh-nametag-btn-${id}`);
+        const originalText = btn.textContent;
+        btn.textContent = '✗ Failed';
+        btn.style.background = '#f44336';
+        setTimeout(() => {
+            btn.textContent = originalText;
+            btn.style.background = '';
+        }, 2000);
+    }
 }
 
 async function refreshAllNameTagsInOBS() {
